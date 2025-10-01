@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import psycopg2
+import pg8000
 import os
 import logging
 from datetime import datetime
@@ -12,7 +12,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-12345')
 
 def get_db_connection():
-    """Create and return a PostgreSQL database connection"""
+    """Create and return a PostgreSQL database connection using pg8000"""
     try:
         # Try to get DATABASE_URL from environment (Render provides this)
         database_url = os.environ.get('DATABASE_URL')
@@ -20,26 +20,61 @@ def get_db_connection():
         if database_url:
             # Use the connection string from Render
             logger.info("Using DATABASE_URL from environment")
-            # Fix for newer PostgreSQL connection strings
-            if database_url.startswith('postgres://'):
+            
+            # Parse DATABASE_URL format: postgresql://user:password@host:port/database
+            if database_url.startswith('postgresql://'):
+                # Remove the postgresql:// prefix
+                url_parts = database_url.replace('postgresql://', '').split('@')
+                if len(url_parts) != 2:
+                    raise ValueError("Invalid DATABASE_URL format")
+                    
+                user_pass = url_parts[0].split(':')
+                host_db = url_parts[1].split('/')
+                if len(host_db) != 2:
+                    raise ValueError("Invalid DATABASE_URL format")
+                    
+                host_port = host_db[0].split(':')
+                
+                # Extract components with safety checks
+                username = user_pass[0]
+                password = user_pass[1] if len(user_pass) > 1 else ''
+                host = host_port[0]
+                port = int(host_port[1]) if len(host_port) > 1 else 5432
+                database = host_db[1]
+                
+                conn = pg8000.connect(
+                    user=username,
+                    password=password,
+                    host=host,
+                    port=port,
+                    database=database
+                )
+            elif database_url.startswith('postgres://'):
+                # Handle older postgres:// format
                 database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            conn = psycopg2.connect(database_url)
+                # Set environment variable for recursive call
+                os.environ['DATABASE_URL'] = database_url
+                return get_db_connection()
+            else:
+                # Fallback for other URL formats
+                raise ValueError("Unsupported DATABASE_URL format")
+                
         else:
             # Use local PostgreSQL development settings
             logger.info("Using local PostgreSQL development settings")
-            conn = psycopg2.connect(
+            conn = pg8000.connect(
                 host=os.environ.get('DB_HOST', 'localhost'),
                 database=os.environ.get('DB_NAME', 'applications_db'),
                 user=os.environ.get('DB_USER', 'postgres'),
                 password=os.environ.get('DB_PASSWORD', 'Maxelo@2023'),
-                port=os.environ.get('DB_PORT', '5432')
+                port=int(os.environ.get('DB_PORT', '5432'))
             )
         
-        logger.info("PostgreSQL connection successful")
+        logger.info("PostgreSQL connection successful using pg8000")
         return conn
         
     except Exception as e:
-        logger.error(f"Error connecting to PostgreSQL database: {e}")
+        logger.error(f"Error connecting to PostgreSQL database with pg8000: {e}")
         return None
 
 def init_database():
@@ -48,8 +83,8 @@ def init_database():
     conn = get_db_connection()
     if conn:
         try:
-            cur = conn.cursor()
-            cur.execute('''
+            cursor = conn.cursor()
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS messages (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(100) NOT NULL,
@@ -60,7 +95,7 @@ def init_database():
                 )
             ''')
             conn.commit()
-            cur.close()
+            cursor.close()
             conn.close()
             logger.info("PostgreSQL database initialized successfully")
             return True
@@ -81,10 +116,10 @@ def index():
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if request.method == 'POST':
-        name = request.form['name']
-        surname = request.form['surname']
-        email = request.form['email']
-        message = request.form['message']
+        name = request.form.get('name', '').strip()
+        surname = request.form.get('surname', '').strip()
+        email = request.form.get('email', '').strip()
+        message = request.form.get('message', '').strip()
         
         if not all([name, surname, email, message]):
             flash('All fields are required!', 'error')
@@ -93,13 +128,13 @@ def send_message():
         conn = get_db_connection()
         if conn:
             try:
-                cur = conn.cursor()
-                cur.execute(
+                cursor = conn.cursor()
+                cursor.execute(
                     'INSERT INTO messages (name, surname, email, message) VALUES (%s, %s, %s, %s)',
                     (name, surname, email, message)
                 )
                 conn.commit()
-                cur.close()
+                cursor.close()
                 conn.close()
                 flash('Message sent successfully!', 'success')
                 return redirect(url_for('index'))
@@ -108,7 +143,7 @@ def send_message():
                 flash('Error sending message. Please try again.', 'error')
                 return redirect(url_for('index'))
         else:
-            flash('PostgreSQL database connection error!', 'error')
+            flash('Database connection error!', 'error')
             return redirect(url_for('index'))
 
 @app.route('/messages')
@@ -116,10 +151,10 @@ def view_messages():
     conn = get_db_connection()
     if conn:
         try:
-            cur = conn.cursor()
-            cur.execute('SELECT * FROM messages ORDER BY created_at DESC')
-            messages = cur.fetchall()
-            cur.close()
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM messages ORDER BY created_at DESC')
+            messages = cursor.fetchall()
+            cursor.close()
             conn.close()
             
             # Convert to list of dictionaries for template
@@ -131,14 +166,15 @@ def view_messages():
                     'surname': msg[2],
                     'email': msg[3],
                     'message': msg[4],
-                    'created_at': msg[5]
+                    'created_at': msg[5].strftime('%Y-%m-%d %H:%M:%S') if msg[5] else 'Unknown'
                 })
                 
             return render_template('messages.html', messages=message_list)
         except Exception as e:
+            logger.error(f"Error retrieving messages: {e}")
             return f"Error retrieving messages: {str(e)}"
     else:
-        return "PostgreSQL database connection error"
+        return "Database connection error"
 
 @app.route('/health')
 def health_check():
@@ -150,16 +186,16 @@ def test_db():
     conn = get_db_connection()
     if conn:
         try:
-            cur = conn.cursor()
-            cur.execute('SELECT version()')
-            db_version = cur.fetchone()
-            cur.close()
+            cursor = conn.cursor()
+            cursor.execute('SELECT version()')
+            db_version = cursor.fetchone()
+            cursor.close()
             conn.close()
-            return f"PostgreSQL connection successful!<br>Database version: {db_version[0]}"
+            return f"PostgreSQL connection successful using pg8000!<br>Database version: {db_version[0]}"
         except Exception as e:
             return f"PostgreSQL connection failed: {str(e)}"
     else:
-        return "PostgreSQL database connection failed!"
+        return "Database connection failed!"
 
 @app.route('/db-info')
 def db_info():
@@ -167,21 +203,21 @@ def db_info():
     conn = get_db_connection()
     if conn:
         try:
-            cur = conn.cursor()
+            cursor = conn.cursor()
             
             # Get message count
-            cur.execute('SELECT COUNT(*) FROM messages')
-            count = cur.fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM messages')
+            count = cursor.fetchone()[0]
             
             # Get database name
-            cur.execute('SELECT current_database()')
-            db_name = cur.fetchone()[0]
+            cursor.execute('SELECT current_database()')
+            db_name = cursor.fetchone()[0]
             
             # Get PostgreSQL version
-            cur.execute('SELECT version()')
-            db_version = cur.fetchone()[0]
+            cursor.execute('SELECT version()')
+            db_version = cursor.fetchone()[0]
             
-            cur.close()
+            cursor.close()
             conn.close()
             
             return f"""
@@ -189,12 +225,21 @@ def db_info():
             <p><strong>Database Name:</strong> {db_name}</p>
             <p><strong>PostgreSQL Version:</strong> {db_version.split(',')[0]}</p>
             <p><strong>Total Messages:</strong> {count}</p>
+            <p><strong>Driver:</strong> pg8000 (Pure Python)</p>
             <p><strong>Environment:</strong> {'Production (Render)' if os.environ.get('DATABASE_URL') else 'Development (Local)'}</p>
             """
         except Exception as e:
             return f"Error getting database info: {str(e)}"
     else:
-        return "No PostgreSQL database connection"
+        return "No database connection"
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return "Page not found", 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return "Internal server error", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
