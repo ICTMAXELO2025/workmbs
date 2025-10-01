@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import psycopg
-from psycopg.rows import dict_row
+import psycopg2
 import os
 import logging
 
@@ -19,18 +18,22 @@ def get_db_connection():
         
         if database_url:
             # Use the connection string provided by Render
+            logger.info(f"Using DATABASE_URL: {database_url[:20]}...")
             if database_url.startswith('postgres://'):
                 database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            conn = psycopg.connect(database_url)
+            conn = psycopg2.connect(database_url)
+            logger.info("Database connection successful using DATABASE_URL")
         else:
             # Fallback to individual parameters
-            conn = psycopg.connect(
+            logger.info("Using individual database parameters")
+            conn = psycopg2.connect(
                 host=os.environ.get('DB_HOST', 'localhost'),
-                dbname=os.environ.get('DB_NAME', 'applications_wil'),
+                database=os.environ.get('DB_NAME', 'applications_wil'),
                 user=os.environ.get('DB_USER', 'postgres'),
                 password=os.environ.get('DB_PASSWORD', 'Maxelo@2023'),
                 port=os.environ.get('DB_PORT', '5432')
             )
+            logger.info("Database connection successful using individual parameters")
         return conn
     except Exception as e:
         logger.error(f"Error connecting to database: {e}")
@@ -38,21 +41,23 @@ def get_db_connection():
 
 def init_database():
     """Initialize the database - called at app startup"""
+    logger.info("Initializing database...")
     conn = get_db_connection()
     if conn:
         try:
-            with conn.cursor() as cur:
-                cur.execute('''
-                    CREATE TABLE IF NOT EXISTS messages (
-                        id SERIAL PRIMARY KEY,
-                        name VARCHAR(100) NOT NULL,
-                        surname VARCHAR(100) NOT NULL,
-                        email VARCHAR(255) NOT NULL,
-                        message TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
+            cur = conn.cursor()
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS messages (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    surname VARCHAR(100) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
             conn.commit()
+            cur.close()
             conn.close()
             logger.info("Database initialized successfully")
             return True
@@ -85,12 +90,13 @@ def send_message():
         conn = get_db_connection()
         if conn:
             try:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'INSERT INTO messages (name, surname, email, message) VALUES (%s, %s, %s, %s)',
-                        (name, surname, email, message)
-                    )
+                cur = conn.cursor()
+                cur.execute(
+                    'INSERT INTO messages (name, surname, email, message) VALUES (%s, %s, %s, %s)',
+                    (name, surname, email, message)
+                )
                 conn.commit()
+                cur.close()
                 conn.close()
                 flash('Message sent successfully!', 'success')
                 return redirect(url_for('index'))
@@ -107,9 +113,10 @@ def view_messages():
     conn = get_db_connection()
     if conn:
         try:
-            with conn.cursor(row_factory=dict_row) as cur:
-                cur.execute('SELECT * FROM messages ORDER BY created_at DESC')
-                messages = cur.fetchall()
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM messages ORDER BY created_at DESC')
+            messages = cur.fetchall()
+            cur.close()
             conn.close()
             return render_template('messages.html', messages=messages)
         except Exception as e:
@@ -132,4 +139,5 @@ def test_db():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    logger.info(f"Starting Flask app on port {port}")
     app.run(host='0.0.0.0', port=port)
