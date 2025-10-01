@@ -64,7 +64,7 @@ def get_db_connection():
             logger.info("Using local PostgreSQL development settings")
             conn = pg8000.connect(
                 host=os.environ.get('DB_HOST', 'localhost'),
-                database=os.environ.get('DB_NAME', 'applications_db'),
+                database=os.environ.get('DB_NAME', 'messagedb'),
                 user=os.environ.get('DB_USER', 'postgres'),
                 password=os.environ.get('DB_PASSWORD', 'Maxelo@2023'),
                 port=int(os.environ.get('DB_PORT', '5432'))
