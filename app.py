@@ -4,21 +4,22 @@ from psycopg2 import sql
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
-# Database configuration
-DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'applications_db',
-    'user': 'postgres',
-    'password': 'Maxelo@2023',
-    'port': '5432'
-}
+# Database configuration - using environment variables for production
+def get_db_config():
+    return {
+        'host': os.environ.get('DB_HOST', 'localhost'),
+        'database': os.environ.get('DB_NAME', 'applications_wil'),
+        'user': os.environ.get('DB_USER', 'postgres'),
+        'password': os.environ.get('DB_PASSWORD', 'Maxelo@2023'),
+        'port': os.environ.get('DB_PORT', '5432')
+    }
 
 def get_db_connection():
     """Create and return a database connection"""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(**get_db_config())
         return conn
     except Exception as e:
         print(f"Error connecting to database: {e}")
@@ -104,7 +105,13 @@ def view_messages():
     else:
         return "Database connection error"
 
+# Health check route for Render
+@app.route('/health')
+def health_check():
+    return 'OK'
+
 if __name__ == '__main__':
     # Initialize database on startup
     init_database()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
