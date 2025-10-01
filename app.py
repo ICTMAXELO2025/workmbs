@@ -1,53 +1,70 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import psycopg2
-from psycopg2 import sql
+import psycopg
+from psycopg.rows import dict_row
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-12345')
 
-# Database configuration - using environment variables for production
-def get_db_config():
-    return {
-        'host': os.environ.get('DB_HOST', 'localhost'),
-        'database': os.environ.get('DB_NAME', 'applications_wil'),
-        'user': os.environ.get('DB_USER', 'postgres'),
-        'password': os.environ.get('DB_PASSWORD', 'Maxelo@2023'),
-        'port': os.environ.get('DB_PORT', '5432')
-    }
-
+# Database configuration
 def get_db_connection():
     """Create and return a database connection"""
     try:
-        conn = psycopg2.connect(**get_db_config())
+        database_url = os.environ.get('DATABASE_URL')
+        
+        if database_url:
+            # Use the connection string provided by Render
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            conn = psycopg.connect(database_url)
+        else:
+            # Fallback to individual parameters
+            conn = psycopg.connect(
+                host=os.environ.get('DB_HOST', 'localhost'),
+                dbname=os.environ.get('DB_NAME', 'applications_wil'),
+                user=os.environ.get('DB_USER', 'postgres'),
+                password=os.environ.get('DB_PASSWORD', 'Maxelo@2023'),
+                port=os.environ.get('DB_PORT', '5432')
+            )
         return conn
     except Exception as e:
-        print(f"Error connecting to database: {e}")
+        logger.error(f"Error connecting to database: {e}")
         return None
 
 def init_database():
-    """Initialize the database and create messages table if it doesn't exist"""
+    """Initialize the database - called at app startup"""
     conn = get_db_connection()
     if conn:
         try:
-            cur = conn.cursor()
-            # Create messages table
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS messages (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    surname VARCHAR(100) NOT NULL,
-                    email VARCHAR(255) NOT NULL,
-                    message TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+            with conn.cursor() as cur:
+                cur.execute('''
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(100) NOT NULL,
+                        surname VARCHAR(100) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
+                        message TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
             conn.commit()
-            cur.close()
             conn.close()
-            print("Database initialized successfully")
+            logger.info("Database initialized successfully")
+            return True
         except Exception as e:
-            print(f"Error initializing database: {e}")
+            logger.error(f"Error initializing database: {e}")
+            return False
+    else:
+        logger.error("Could not initialize database - no connection")
+        return False
+
+# Initialize database when the app starts
+init_database()
 
 @app.route('/')
 def index():
@@ -56,33 +73,30 @@ def index():
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if request.method == 'POST':
-        # Get form data
         name = request.form['name']
         surname = request.form['surname']
         email = request.form['email']
         message = request.form['message']
         
-        # Basic validation
         if not all([name, surname, email, message]):
             flash('All fields are required!', 'error')
             return redirect(url_for('index'))
         
-        # Insert into database
         conn = get_db_connection()
         if conn:
             try:
-                cur = conn.cursor()
-                cur.execute(
-                    'INSERT INTO messages (name, surname, email, message) VALUES (%s, %s, %s, %s)',
-                    (name, surname, email, message)
-                )
+                with conn.cursor() as cur:
+                    cur.execute(
+                        'INSERT INTO messages (name, surname, email, message) VALUES (%s, %s, %s, %s)',
+                        (name, surname, email, message)
+                    )
                 conn.commit()
-                cur.close()
                 conn.close()
                 flash('Message sent successfully!', 'success')
                 return redirect(url_for('index'))
             except Exception as e:
-                flash(f'Error sending message: {str(e)}', 'error')
+                logger.error(f"Database error: {e}")
+                flash('Error sending message. Please try again.', 'error')
                 return redirect(url_for('index'))
         else:
             flash('Database connection error!', 'error')
@@ -90,14 +104,12 @@ def send_message():
 
 @app.route('/messages')
 def view_messages():
-    """Route to view all messages (for admin purposes)"""
     conn = get_db_connection()
     if conn:
         try:
-            cur = conn.cursor()
-            cur.execute('SELECT * FROM messages ORDER BY created_at DESC')
-            messages = cur.fetchall()
-            cur.close()
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute('SELECT * FROM messages ORDER BY created_at DESC')
+                messages = cur.fetchall()
             conn.close()
             return render_template('messages.html', messages=messages)
         except Exception as e:
@@ -105,13 +117,19 @@ def view_messages():
     else:
         return "Database connection error"
 
-# Health check route for Render
 @app.route('/health')
 def health_check():
     return 'OK'
 
+@app.route('/test-db')
+def test_db():
+    conn = get_db_connection()
+    if conn:
+        conn.close()
+        return "Database connection successful!"
+    else:
+        return "Database connection failed!"
+
 if __name__ == '__main__':
-    # Initialize database on startup
-    init_database()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
