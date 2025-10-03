@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Send Message</h1>
+    <a href="{{ url_for('employee_messages') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Messages
+    </a>
+</div>
+
+<div class="dashboard-widget">
+    <form method="POST">
+        <div class="mb-3">
+            <label for="receiver_id" class="form-label">To</label>
+            <select class="form-select" id="receiver_id" name="receiver_id" required>
+                <option value="">Select Employee</option>
+                {% for employee in employees %}
+                <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="subject" class="form-label">Subject</label>
+            <input type="text" class="form-control" id="subject" name="subject" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="content" class="form-label">Message</label>
+            <textarea class="form-control" id="content" name="content" rows="6" required></textarea>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-2"></i>Send Message
+            </button>
+            <a href="{{ url_for('employee_messages') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

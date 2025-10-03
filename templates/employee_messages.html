@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">My Messages</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employee_messages_send') }}" class="btn btn-primary">
+            <i class="fas fa-paper-plane me-2"></i>Send Message
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-widget">
+    {% if messages %}
+    <div class="list-group">
+        {% for message in messages %}
+        <div class="list-group-item list-group-item-action {% if not message.is_read %}message-item unread{% endif %}" data-message-id="{{ message.id }}">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ message.subject }}</h5>
+                <small>{{ message.created_at.strftime('%b %d, %Y %H:%M') }}</small>
+            </div>
+            <p class="mb-1">{{ message.content }}</p>
+            <small>From: {{ message.sender.name }}</small>
+            {% if not message.is_read %}
+            <span class="badge bg-warning float-end">New</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-envelope-open fa-3x text-muted mb-3"></i>
+        <h4>No Messages</h4>
+        <p class="text-muted">You don't have any messages yet.</p>
+        <a href="{{ url_for('employee_messages_send') }}" class="btn btn-primary">Send Your First Message</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

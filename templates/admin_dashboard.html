@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Company Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Admin Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <span class="btn btn-sm btn-outline-secondary">Welcome, {{ current_user.name }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card text-primary">
+            <div class="card-body">
+                <div class="number">{{ total_employees }}</div>
+                <div class="label">Total Employees</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-warning">
+            <div class="card-body">
+                <div class="number">{{ pending_leave_requests }}</div>
+                <div class="label">Pending Leaves</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-info">
+            <div class="card-body">
+                <div class="number">{{ unread_admin_messages }}</div>
+                <div class="label">Unread Messages</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-success">
+            <div class="card-body">
+                <div class="number">{{ active_employees }}</div>
+                <div class="label">Active Employees</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Pending Leave Requests -->
+    <div class="col-md-6 mb-4">
+        <div class="dashboard-widget">
+            <h5 class="mb-3">
+                <i class="fas fa-clock me-2"></i>Pending Leave Requests
+                <a href="{{ url_for('admin_leave_requests') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
+            </h5>
+            {% if pending_leaves %}
+            <div class="list-group list-group-flush">
+                {% for leave in pending_leaves %}
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ leave.employee.name }}</h6>
+                        <small>{{ leave.created_at.strftime('%b %d') }}</small>
+                    </div>
+                    <p class="mb-1">{{ leave.leave_type }} - {{ leave.start_date }} to {{ leave.end_date }}</p>
+                    <small class="text-muted">{{ leave.reason[:100] }}...</small>
+                    <div class="mt-2">
+                        <a href="{{ url_for('admin_leave_request_update', request_id=leave.id) }}?status=approved" 
+                           class="btn btn-success btn-sm">Approve</a>
+                        <a href="{{ url_for('admin_leave_request_update', request_id=leave.id) }}?status=rejected" 
+                           class="btn btn-danger btn-sm">Reject</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">No pending leave requests.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Employee Messages -->
+    <div class="col-md-6 mb-4">
+        <div class="dashboard-widget">
+            <h5 class="mb-3">
+                <i class="fas fa-comments me-2"></i>Recent Employee Messages
+                <a href="{{ url_for('admin_messages') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
+            </h5>
+            {% if recent_messages %}
+            <div class="list-group list-group-flush">
+                {% for message in recent_messages %}
+                <div class="list-group-item {% if not message.is_read %}bg-light{% endif %}">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ message.employee.name }}</h6>
+                        <small>{{ message.created_at.strftime('%b %d') }}</small>
+                    </div>
+                    <h6 class="mb-1">{{ message.subject }}</h6>
+                    <p class="mb-1 text-muted small">{{ message.content[:100] }}...</p>
+                    {% if not message.is_read %}
+                    <span class="badge bg-warning">New</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">No messages from employees.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="dashboard-widget">
+    <h5 class="mb-3"><i class="fas fa-cogs me-2"></i>Admin Quick Actions</h5>
+    <div class="quick-actions">
+        <a href="{{ url_for('admin_employees_add') }}" class="quick-action-btn">
+            <i class="fas fa-user-plus fa-2x mb-2 text-primary"></i>
+            <div>Add Employee</div>
+        </a>
+        <a href="{{ url_for('admin_leave_requests') }}" class="quick-action-btn">
+            <i class="fas fa-calendar-check fa-2x mb-2 text-success"></i>
+            <div>Manage Leaves</div>
+        </a>
+        <a href="{{ url_for('admin_messages') }}" class="quick-action-btn">
+            <i class="fas fa-inbox fa-2x mb-2 text-info"></i>
+            <div>View Messages</div>
+        </a>
+        <a href="{{ url_for('admin_employees') }}" class="quick-action-btn">
+            <i class="fas fa-users fa-2x mb-2 text-warning"></i>
+            <div>Manage Employees</div>
+        </a>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="dashboard-widget mt-4">
+    <h5 class="mb-3"><i class="fas fa-history me-2"></i>Recent System Activity</h5>
+    <div class="list-group list-group-flush">
+        <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+                <small>System initialized successfully</small>
+                <small class="text-muted">Just now</small>
+            </div>
+        </div>
+        {% if recent_leaves %}
+        <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+                <small>{{ recent_leaves|length }} pending leave requests need attention</small>
+                <small class="text-muted">Today</small>
+            </div>
+        </div>
+        {% endif %}
+        {% if recent_messages %}
+        <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+                <small>{{ recent_messages|length }} employee messages received</small>
+                <small class="text-muted">Today</small>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Request Leave</h1>
+    <a href="{{ url_for('employee_leave') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Leaves
+    </a>
+</div>
+
+<div class="dashboard-widget">
+    <form method="POST">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="leave_type" class="form-label">Leave Type</label>
+                <select class="form-select" id="leave_type" name="leave_type" required>
+                    <option value="">Select Leave Type</option>
+                    <option value="Vacation">Vacation</option>
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="Personal Leave">Personal Leave</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Maternity/Paternity">Maternity/Paternity</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" required>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="reason" class="form-label">Reason</label>
+                <textarea class="form-control" id="reason" name="reason" rows="3" required placeholder="Please provide a reason for your leave request"></textarea>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-2"></i>Submit Request
+            </button>
+            <a href="{{ url_for('employee_leave') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

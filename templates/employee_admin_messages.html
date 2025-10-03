@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Messages to Admin</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-primary">
+            <i class="fas fa-paper-plane me-2"></i>Contact Admin
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-widget">
+    {% if messages %}
+    <div class="list-group">
+        {% for message in messages %}
+        <div class="list-group-item list-group-item-action {% if not message.is_read %}bg-light{% endif %}">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ message.subject }}</h5>
+                <small>{{ message.created_at.strftime('%b %d, %Y %H:%M') }}</small>
+            </div>
+            <p class="mb-1">{{ message.content }}</p>
+            
+            {% if message.admin_response %}
+            <div class="mt-3 p-3 bg-light rounded">
+                <strong class="text-success">Admin Response:</strong>
+                <p class="mb-0 mt-1">{{ message.admin_response }}</p>
+                <small class="text-muted">Responded on: {{ message.updated_at.strftime('%b %d, %Y %H:%M') }}</small>
+            </div>
+            {% else %}
+            <small class="text-warning"><i class="fas fa-clock me-1"></i>Waiting for admin response</small>
+            {% endif %}
+            
+            {% if not message.is_read %}
+            <span class="badge bg-warning float-end">Unread by Admin</span>
+            {% else %}
+            <span class="badge bg-success float-end">Read by Admin</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-headset fa-3x text-muted mb-3"></i>
+        <h4>No Messages to Admin</h4>
+        <p class="text-muted">You haven't sent any messages to the admin yet.</p>
+        <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-primary">Contact Admin</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

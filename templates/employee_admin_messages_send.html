@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Contact Admin</h1>
+    <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Messages
+    </a>
+</div>
+
+<div class="dashboard-widget">
+    <form method="POST">
+        <div class="mb-3">
+            <label for="subject" class="form-label">Subject</label>
+            <input type="text" class="form-control" id="subject" name="subject" required placeholder="Brief subject of your message">
+        </div>
+        
+        <div class="mb-3">
+            <label for="content" class="form-label">Message</label>
+            <textarea class="form-control" id="content" name="content" rows="8" required placeholder="Please describe your issue, question, or request in detail..."></textarea>
+        </div>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> Your message will be sent directly to the system administrator. 
+            Please provide as much detail as possible to help us assist you better.
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-2"></i>Send to Admin
+            </button>
+            <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

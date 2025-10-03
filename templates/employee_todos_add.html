@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Add New Task</h1>
+    <a href="{{ url_for('employee_todos') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Tasks
+    </a>
+</div>
+
+<div class="dashboard-widget">
+    <form method="POST">
+        <div class="mb-3">
+            <label for="content" class="form-label">Task Description <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="content" name="content" rows="4" required 
+                      placeholder="What do you need to do? Be specific and clear..."></textarea>
+            <div class="form-text">Describe your task in detail</div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="priority" class="form-label">Priority</label>
+                <select class="form-select" id="priority" name="priority">
+                    <option value="low">📋 Low Priority</option>
+                    <option value="medium" selected>⚠️ Medium Priority</option>
+                    <option value="high">🚨 High Priority</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="due_date" class="form-label">Due Date (Optional)</label>
+                <input type="date" class="form-control" id="due_date" name="due_date" 
+                       min="{{ date.today().isoformat() }}">
+                <div class="form-text">Set a deadline for this task</div>
+            </div>
+        </div>
+        
+        <!-- Priority Indicators -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <small class="text-muted">Priority Guide:</small>
+                <div class="d-flex gap-2 mt-1">
+                    <span class="badge bg-info">Low - Routine tasks</span>
+                    <span class="badge bg-warning">Medium - Important tasks</span>
+                    <span class="badge bg-danger">High - Urgent tasks</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Add Task
+            </button>
+            <a href="{{ url_for('employee_todos') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('due_date').min = today;
+    
+    // Character counter for task description
+    const contentTextarea = document.getElementById('content');
+    const charCount = document.createElement('div');
+    charCount.className = 'form-text text-end';
+    charCount.textContent = '0 characters';
+    contentTextarea.parentNode.appendChild(charCount);
+    
+    contentTextarea.addEventListener('input', function() {
+        charCount.textContent = `${this.value.length} characters`;
+        if (this.value.length > 500) {
+            charCount.className = 'form-text text-end text-danger';
+        } else if (this.value.length > 300) {
+            charCount.className = 'form-text text-end text-warning';
+        } else {
+            charCount.className = 'form-text text-end text-success';
+        }
+    });
+});
+</script>
+{% endblock %}
