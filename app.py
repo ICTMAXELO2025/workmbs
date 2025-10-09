@@ -6,6 +6,8 @@ import os
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import io
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
 
@@ -804,16 +806,11 @@ def update_profile():
     
     return redirect(url_for('profile'))
 
-# Common Routes
 @app.route('/logout')
 def logout():
     session.clear()
     flash('You have been logged out', 'info')
     return redirect(url_for('employee_login'))
-
-
-    import hashlib
-import os
 
 @app.route('/admin/quick')
 def admin_quick_access():
@@ -892,8 +889,6 @@ def employee_quick_access():
     
     flash('Quick employee access granted! Welcome back.', 'success')
     return redirect(url_for('employee_dashboard'))
-
-    
 
 # Error handlers
 @app.errorhandler(404)
