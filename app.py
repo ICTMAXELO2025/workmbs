@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import io
 import logging
-logging.basicConfig(level=logging.DEBUG)
 
+logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
 
 app = Flask(__name__)
@@ -32,10 +32,10 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True
 }
 
-# Enhanced Session Configuration
+# Enhanced Session Configuration for multiple tabs
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
@@ -49,13 +49,11 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Initialize database
 db.init_app(app)
 
-# Session refresh middleware
+# Session refresh middleware for multiple tabs
 @app.before_request
 def refresh_session():
     if 'user_id' in session:
         session.modified = True
-
-# ... rest of your utility functions and routes remain the same ...
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -75,7 +73,7 @@ def format_file_size(size):
 # Context processor to make functions available in all templates
 @app.context_processor
 def utility_processor():
-    return dict(format_file_size=format_file_size, date=date)
+    return dict(format_file_size=format_file_size, date=date, datetime=datetime)
 
 def login_required(role=None):
     """Decorator to require login and optionally check role"""
@@ -85,7 +83,20 @@ def login_required(role=None):
         def decorated_function(*args, **kwargs):
             if 'user_id' not in session:
                 flash('Please log in to access this page.', 'error')
-                return redirect(url_for('employee_login'))
+                if role == 'admin':
+                    return redirect(url_for('admin_login'))
+                else:
+                    return redirect(url_for('employee_login'))
+            
+            # Verify the user still exists and is active
+            current_user = get_current_user()
+            if not current_user:
+                session.clear()
+                flash('Your session has expired. Please log in again.', 'error')
+                if role == 'admin':
+                    return redirect(url_for('admin_login'))
+                else:
+                    return redirect(url_for('employee_login'))
             
             if role and session.get('user_role') != role:
                 flash('Access denied. Insufficient permissions.', 'error')
@@ -96,17 +107,22 @@ def login_required(role=None):
     return decorator
 
 def get_current_user():
-    """Get current user from session"""
+    """Get current user from session with error handling"""
     if 'user_id' not in session:
         return None
     
     user_id = session['user_id']
     user_role = session.get('user_role')
     
-    if user_role == 'admin':
-        return Admin.query.get(user_id)
-    elif user_role == 'employee':
-        return Employee.query.get(user_id)
+    try:
+        if user_role == 'admin':
+            return Admin.query.get(user_id)
+        elif user_role == 'employee':
+            return Employee.query.get(user_id)
+    except Exception as e:
+        print(f"Error getting current user: {e}")
+        return None
+    
     return None
 
 # Create tables and initial data
@@ -154,19 +170,17 @@ try:
 except Exception as e:
     print(f"❌ Database connection failed: {e}")
 
-# Routes (all your existing routes remain the same)
+# Routes
 @app.route('/')
 def index():
-    return redirect(url_for('employee_login'))
+    """Main index page with links to both login types"""
+    return render_template('index.html')
 
 # Employee Authentication Routes
 @app.route('/employee/login', methods=['GET', 'POST'])
 def employee_login():
-    if 'user_id' in session:
-        if session.get('user_role') == 'employee':
-            return redirect(url_for('employee_dashboard'))
-        else:
-            return redirect(url_for('admin_dashboard'))
+    if 'user_id' in session and session.get('user_role') == 'employee':
+        return redirect(url_for('employee_dashboard'))
             
     if request.method == 'POST':
         email = request.form.get('email')
@@ -175,16 +189,23 @@ def employee_login():
         employee = Employee.query.filter_by(email=email, is_active=True).first()
         
         if employee and check_password_hash(employee.password, password):
-            # Set session
+            # Clear any existing session completely
+            session.clear()
+            
+            # Set session with proper configuration
             session['user_id'] = employee.id
             session['user_role'] = 'employee'
             session['user_name'] = employee.name
+            session['user_email'] = employee.email
             session.permanent = True
+            
+            # Force session to save
+            session.modified = True
             
             employee.last_login = datetime.utcnow()
             db.session.commit()
             
-            flash('Login successful!', 'success')
+            flash('Employee login successful!', 'success')
             return redirect(url_for('employee_dashboard'))
         else:
             flash('Invalid email or password', 'error')
@@ -193,11 +214,8 @@ def employee_login():
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-    if 'user_id' in session:
-        if session.get('user_role') == 'admin':
-            return redirect(url_for('admin_dashboard'))
-        else:
-            return redirect(url_for('employee_dashboard'))
+    if 'user_id' in session and session.get('user_role') == 'admin':
+        return redirect(url_for('admin_dashboard'))
             
     if request.method == 'POST':
         email = request.form.get('email')
@@ -206,11 +224,18 @@ def admin_login():
         admin = Admin.query.filter_by(email=email).first()
         
         if admin and check_password_hash(admin.password, password):
-            # Set session
+            # Clear any existing session completely
+            session.clear()
+            
+            # Set session with proper configuration
             session['user_id'] = admin.id
             session['user_role'] = 'admin'
             session['user_name'] = admin.name
+            session['user_email'] = admin.email
             session.permanent = True
+            
+            # Force session to save
+            session.modified = True
             
             admin.last_login = datetime.utcnow()
             db.session.commit()
@@ -222,8 +247,20 @@ def admin_login():
     
     return render_template('admin_login.html')
 
-# Add these routes to your app.py
+# Separate logout routes
+@app.route('/employee/logout')
+def employee_logout():
+    session.clear()
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('employee_login'))
 
+@app.route('/admin/logout')
+def admin_logout():
+    session.clear()
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('admin_login'))
+
+# Password reset routes
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     """Handle password reset with token"""
@@ -235,15 +272,13 @@ def reset_password(token):
             flash('Passwords do not match.', 'error')
             return render_template('reset_password.html', token=token)
         
-        # In a real app, you'd verify the token here
-        # For now, we'll just find the employee by email from session
         email = session.get('reset_email')
         if email:
             employee = Employee.query.filter_by(email=email, is_active=True).first()
             if employee:
                 employee.password = generate_password_hash(new_password)
                 db.session.commit()
-                session.pop('reset_email', None)  # Clear the reset email
+                session.pop('reset_email', None)
                 flash('Password reset successfully! You can now log in with your new password.', 'success')
                 return redirect(url_for('employee_login'))
         
@@ -252,7 +287,6 @@ def reset_password(token):
     
     return render_template('reset_password.html', token=token)
 
-# Update the existing forgot_password route
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -261,15 +295,7 @@ def forgot_password():
         employee = Employee.query.filter_by(email=email, is_active=True).first()
         
         if employee:
-            # Store email in session for verification
             session['reset_email'] = email
-            
-            # In a real application, you would:
-            # 1. Generate a secure token
-            # 2. Send an email with reset link
-            # 3. Store token in database with expiration
-            
-            # For now, we'll redirect directly to reset page
             flash('Please set your new password below.', 'info')
             return redirect(url_for('reset_password', token='demo-token'))
         else:
@@ -448,7 +474,6 @@ def employee_documents_upload():
         if file and allowed_file(file.filename):
             try:
                 filename = secure_filename(file.filename)
-                # Create unique filename
                 unique_filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{filename}"
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
                 file.save(file_path)
@@ -493,7 +518,6 @@ def employee_document_delete(doc_id):
     document = Document.query.filter_by(id=doc_id, employee_id=current_user.id).first_or_404()
     
     try:
-        # Remove file from filesystem
         if os.path.exists(document.file_path):
             os.remove(document.file_path)
         
@@ -784,7 +808,6 @@ def admin_message_mark_read(message_id):
 @login_required()
 def profile():
     current_user = get_current_user()
-    # Get additional data for profile page
     if session.get('user_role') == 'admin':
         employees_count = Employee.query.filter_by(is_active=True).count()
         pending_leaves_count = LeaveRequest.query.filter_by(status='pending').count()
@@ -824,29 +847,19 @@ def update_profile():
     
     return redirect(url_for('profile'))
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash('You have been logged out', 'info')
-    return redirect(url_for('employee_login'))
-
+# Quick access routes (for development)
 @app.route('/admin/quick')
 def admin_quick_access():
-    """Quick admin access for development - remove in production"""
-    # You can change this secret word to anything you want
+    """Quick admin access for development"""
     secret_word = "maxelo"
-    
     provided_word = request.args.get('key', '')
     
     if provided_word != secret_word:
         flash('Invalid access key', 'error')
         return redirect(url_for('admin_login'))
     
-    # Find or create the default admin
     admin = Admin.query.filter_by(email='admin@maxelo.co.za').first()
-    
     if not admin:
-        # Create default admin if not exists
         admin = Admin(
             email='admin@maxelo.co.za',
             password=generate_password_hash('admin123'),
@@ -854,13 +867,14 @@ def admin_quick_access():
         )
         db.session.add(admin)
         db.session.commit()
-        print("Default admin created via secret link")
     
-    # Set session
+    session.clear()
     session['user_id'] = admin.id
     session['user_role'] = 'admin'
     session['user_name'] = admin.name
+    session['user_email'] = admin.email
     session.permanent = True
+    session.modified = True
     
     admin.last_login = datetime.utcnow()
     db.session.commit()
@@ -872,18 +886,14 @@ def admin_quick_access():
 def employee_quick_access():
     """Quick employee access for development"""
     secret_word = "employee123"
-    
     provided_word = request.args.get('key', '')
     
     if provided_word != secret_word:
         flash('Invalid access key', 'error')
         return redirect(url_for('employee_login'))
     
-    # Find or create the default employee
     employee = Employee.query.filter_by(email='mavis@maxelo.com').first()
-    
     if not employee:
-        # Create default employee if not exists
         employee = Employee(
             email='mavis@maxelo.com',
             password=generate_password_hash('123admin'),
@@ -894,13 +904,14 @@ def employee_quick_access():
         )
         db.session.add(employee)
         db.session.commit()
-        print("Default employee created via secret link")
     
-    # Set session
+    session.clear()
     session['user_id'] = employee.id
     session['user_role'] = 'employee'
     session['user_name'] = employee.name
+    session['user_email'] = employee.email
     session.permanent = True
+    session.modified = True
     
     employee.last_login = datetime.utcnow()
     db.session.commit()
@@ -917,5 +928,6 @@ def not_found_error(error):
 def internal_error(error):
     db.session.rollback()
     return render_template('500.html'), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
