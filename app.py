@@ -14,18 +14,19 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Database configuration - Use environment variable for Render, fallback to PostgreSQL for development
+# Database configuration - Use SQLite for local development
 database_url = os.getenv('DATABASE_URL')
-if database_url:
-    # Render provides PostgreSQL URL
+if database_url and database_url.startswith('postgres'):
+    # For production (Render) - fix the URL format if needed
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    print("Using DATABASE_URL from environment")
+    print("Using PostgreSQL database from environment")
 else:
-    # Local development - Use PostgreSQL with your credentials
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Maxelo%402023@localhost:5432/managament_db'
-    print("Using local PostgreSQL database")
+    # Local development - Use SQLite (no password issues)
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(base_dir, "management.db")}'
+    print("Using SQLite database for local development")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -136,7 +137,15 @@ with app.app_context():
         print(f"Error initializing database: {str(e)}")
         db.session.rollback()
 
-# Routes
+# Test database connection
+try:
+    with app.app_context():
+        db.engine.connect()
+        print("✅ Database connection successful!")
+except Exception as e:
+    print(f"❌ Database connection failed: {e}")
+
+# Routes (all your existing routes remain the same)
 @app.route('/')
 def index():
     return redirect(url_for('employee_login'))
@@ -899,6 +908,5 @@ def not_found_error(error):
 def internal_error(error):
     db.session.rollback()
     return render_template('500.html'), 500
-
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
