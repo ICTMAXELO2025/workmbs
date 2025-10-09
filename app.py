@@ -12,7 +12,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Database configuration - Use environment variable for Render, fallback to PostgreSQL for development
+# Database configuration - Use environment variable for Render, fallback to SQLite for development
 database_url = os.getenv('DATABASE_URL')
 if database_url:
     # Render provides PostgreSQL URL
@@ -21,9 +21,9 @@ if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     print("Using DATABASE_URL from environment")
 else:
-    # Local development - Use PostgreSQL with your credentials
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Maxelo%402023@localhost:5432/managament_db'
-    print("Using local PostgreSQL database")
+    # Local development - Use SQLite for simplicity
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local_dev.db'
+    print("Using local SQLite database")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
