@@ -174,7 +174,7 @@ except Exception as e:
 @app.route('/')
 def index():
     """Main index page with links to both login types"""
-    return render_template('index.html')
+    return render_template('employee_login.html')
 
 # Employee Authentication Routes
 @app.route('/employee/login', methods=['GET', 'POST'])
