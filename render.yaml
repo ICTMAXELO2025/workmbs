@@ -4,17 +4,12 @@ services:
     env: python
     plan: free
     buildCommand: |
+      pip install --upgrade pip setuptools wheel
+      pip install --no-cache-dir --force-reinstall --ignore-installed psycopg2-binary==2.8.6
       pip install -r requirements.txt
-    startCommand: |
-      gunicorn --bind 0.0.0.0:$PORT app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
         value: 3.11.9
-
-databases:
-  - name: managament_db
-    plan: free
-    databaseName: managament_db
-    user: managament_db_user
