@@ -17,13 +17,11 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-pro
 # Database configuration - Use SQLite for local development
 database_url = os.getenv('DATABASE_URL')
 if database_url and database_url.startswith('postgres'):
-    # For production (Render) - fix the URL format if needed
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     print("Using PostgreSQL database from environment")
 else:
-    # Local development - Use SQLite (no password issues)
     base_dir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(base_dir, "management.db")}'
     print("Using SQLite database for local development")
@@ -34,19 +32,30 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True
 }
 
+# Enhanced Session Configuration
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
 # File upload configuration
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'xlsx', 'xls', 'pptx', 'ppt', 'csv'}
 
-# Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Initialize database
 db.init_app(app)
 
-# Session configuration
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+# Session refresh middleware
+@app.before_request
+def refresh_session():
+    if 'user_id' in session:
+        session.modified = True
+
+# ... rest of your utility functions and routes remain the same ...
 
 def allowed_file(filename):
     return '.' in filename and \
