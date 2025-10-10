@@ -33,7 +33,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_pre_ping': True
 }
-}
+
 
 # Initialize database
 db.init_app(app)
