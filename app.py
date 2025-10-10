@@ -275,6 +275,19 @@ def admin_logout():
     flash('You have been logged out successfully.', 'info')
     return redirect(url_for('admin_login'))
 
+# Add this general logout route
+@app.route('/logout')
+def logout():
+    """General logout route that redirects based on user role"""
+    user_role = session.get('user_role')
+    session.clear()
+    flash('You have been logged out successfully.', 'info')
+    
+    if user_role == 'admin':
+        return redirect(url_for('admin_login'))
+    else:
+        return redirect(url_for('employee_login'))
+
 # Password reset routes
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
