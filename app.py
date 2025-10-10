@@ -14,23 +14,36 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Database configuration - Use SQLite for local development
+# Database configuration
 database_url = os.getenv('DATABASE_URL')
-if database_url and database_url.startswith('postgres'):
+if database_url:
+    # Render provides PostgreSQL URL
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     print("Using PostgreSQL database from environment")
 else:
-    base_dir = os.path.abspath(os.path.dirname(__file__))
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(base_dir, "management.db")}'
-    print("Using SQLite database for local development")
+    # Local development - Use PostgreSQL with URL encoded password
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Maxelo%402023@localhost:5432/managament_db'
+    print("Using local PostgreSQL database")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_pre_ping': True
 }
+
+# Initialize database
+db.init_app(app)
+
+# Test database connection AFTER db.init_app(app)
+try:
+    with app.app_context():
+        db.engine.connect()
+    print("✅ Database connection successful!")
+except Exception as e:
+    print(f"❌ Database connection failed: {e}")
+
 
 # Enhanced Session Configuration for multiple tabs
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
@@ -47,7 +60,7 @@ ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Initialize database
-db.init_app(app)
+
 
 # Session refresh middleware for multiple tabs
 @app.before_request
@@ -174,7 +187,7 @@ except Exception as e:
 @app.route('/')
 def index():
     """Main index page with links to both login types"""
-    return render_template('employee_login.html')
+    return render_template('index.html')  # Fixed: was 'e'
 
 # Employee Authentication Routes
 @app.route('/employee/login', methods=['GET', 'POST'])
