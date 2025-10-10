@@ -23,14 +23,16 @@ if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     print("Using PostgreSQL database from environment")
 else:
-    # Local development - Use PostgreSQL with URL encoded password
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Maxelo%402023@localhost:5432/managament_db'
-    print("Using local PostgreSQL database")
+    # Local development - Use SQLite
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(base_dir, "management.db")}'
+    print("Using SQLite database for local development")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_pre_ping': True
+}
 }
 
 # Initialize database
