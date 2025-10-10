@@ -174,7 +174,7 @@ except Exception as e:
 @app.route('/')
 def index():
     """Main index page with links to both login types"""
-    return render_template('employee_login.html')
+    return render_template('e')
 
 # Employee Authentication Routes
 @app.route('/employee/login', methods=['GET', 'POST'])
@@ -337,7 +337,7 @@ def employee_dashboard():
                              unread_messages=unread_messages,
                              pending_todos=pending_todos,
                              approved_leaves=approved_leaves,
-                             recent_leaves=recent_leaves, 
+                             recent_leaves=recent_leaves,
                              recent_messages=recent_messages,
                              employees=employees,
                              upcoming_todos=upcoming_todos,
