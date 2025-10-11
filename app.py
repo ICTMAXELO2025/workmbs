@@ -22,7 +22,7 @@ def get_database_uri():
         return database_url
     
     # Fallback to local PostgreSQL from env file
-    return 'postgresql://postgres:Maxelo%402023@localhost:5432/management_db'
+    return 'postgresql://postgres:Maxelo%402023@localhost:5432/managament_db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
