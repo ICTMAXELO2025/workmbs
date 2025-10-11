@@ -12,7 +12,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-
 
 # Database configuration - PostgreSQL only
 def get_database_uri():
-    """Get PostgreSQL database URI with proper formatting"""
+    """Get database URI based on environment"""
+    # Check for PostgreSQL URL first (for production/Render)
     database_url = os.environ.get('DATABASE_URL')
     
     if database_url:
@@ -21,8 +22,8 @@ def get_database_uri():
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
         return database_url
     
-    # Fallback to local PostgreSQL from env file
-    return 'postgresql://postgres:Maxelo%402023@localhost:5432/managament_db'
+    # Fallback to local PostgreSQL for development
+    return 'postgresql://postgres:Maxelo%402023@localhost:5432/management_db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
