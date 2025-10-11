@@ -9,6 +9,9 @@
         <div class="btn-group me-2">
             <span class="btn btn-sm btn-outline-secondary">Welcome, {{ current_user.name }}</span>
         </div>
+        <div class="btn-group me-2">
+            <span class="btn btn-sm btn-outline-info">{{ current_user.department }} • {{ current_user.position }}</span>
+        </div>
     </div>
 </div>
 
@@ -16,33 +19,37 @@
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card stat-card text-primary">
-            <div class="card-body">
+            <div class="card-body text-center">
                 <div class="number">{{ pending_leaves }}</div>
-                <div class="label">Pending Leave Requests</div>
+                <div class="label">Pending Leaves</div>
+                <small class="text-muted">{{ recent_leaves|length }} recent</small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card text-warning">
-            <div class="card-body">
+            <div class="card-body text-center">
                 <div class="number">{{ unread_messages }}</div>
                 <div class="label">Unread Messages</div>
+                <small class="text-muted">{{ recent_messages|length }} recent</small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card text-info">
-            <div class="card-body">
+            <div class="card-body text-center">
                 <div class="number">{{ pending_todos }}</div>
                 <div class="label">Pending Tasks</div>
+                <small class="text-muted">{{ upcoming_todos|length }} upcoming</small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card text-success">
-            <div class="card-body">
+            <div class="card-body text-center">
                 <div class="number">{{ approved_leaves }}</div>
                 <div class="label">Approved Leaves</div>
+                <small class="text-muted">This year</small>
             </div>
         </div>
     </div>
@@ -53,25 +60,37 @@
     <div class="col-md-6 mb-4">
         <div class="dashboard-widget">
             <h5 class="mb-3">
-                <i class="fas fa-calendar-alt me-2"></i>Recent Leave Requests
+                <i class="fas fa-calendar-alt me-2 text-primary"></i>Recent Leave Requests
                 <a href="{{ url_for('employee_leave') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
             </h5>
             {% if recent_leaves %}
             <div class="list-group list-group-flush">
                 {% for leave in recent_leaves %}
                 <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-1">{{ leave.leave_type }}</h6>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ leave.leave_type|title }}</h6>
                         <small class="text-muted">{{ leave.start_date }} to {{ leave.end_date }}</small>
+                        <br>
+                        <small class="text-muted">{{ leave.reason[:50] }}{% if leave.reason|length > 50 %}...{% endif %}</small>
                     </div>
-                    <span class="badge bg-{{ 'warning' if leave.status == 'pending' else 'success' if leave.status == 'approved' else 'danger' }}">
-                        {{ leave.status|title }}
-                    </span>
+                    <div class="text-end">
+                        <span class="badge bg-{{ 'warning' if leave.status == 'pending' else 'success' if leave.status == 'approved' else 'danger' }} mb-1">
+                            {{ leave.status|title }}
+                        </span>
+                        <br>
+                        <small class="text-muted">{{ leave.created_at.strftime('%b %d') }}</small>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-muted text-center py-3">No leave requests yet.</p>
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+                <p class="text-muted mb-3">No leave requests yet.</p>
+                <a href="{{ url_for('employee_leave_request') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Request Leave
+                </a>
+            </div>
             {% endif %}
         </div>
     </div>
@@ -80,24 +99,47 @@
     <div class="col-md-6 mb-4">
         <div class="dashboard-widget">
             <h5 class="mb-3">
-                <i class="fas fa-envelope me-2"></i>Recent Messages
+                <i class="fas fa-envelope me-2 text-info"></i>Recent Messages
                 <a href="{{ url_for('employee_messages') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
             </h5>
             {% if recent_messages %}
             <div class="list-group list-group-flush">
                 {% for message in recent_messages %}
-                <div class="list-group-item {% if not message.is_read %}bg-light{% endif %}">
+                <div class="list-group-item {% if not message.is_read %}unread-message{% endif %}">
                     <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">{{ message.subject }}</h6>
+                        <h6 class="mb-1">
+                            {{ message.subject }}
+                            {% if not message.is_read %}
+                            <span class="badge bg-warning ms-1">New</span>
+                            {% endif %}
+                        </h6>
                         <small>{{ message.created_at.strftime('%b %d') }}</small>
                     </div>
                     <p class="mb-1 text-muted small">{{ message.content[:100] }}...</p>
-                    <small>From: {{ message.sender.name }}</small>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-primary">
+                            <i class="fas fa-user me-1"></i>From: {{ message.sender.name }}
+                        </small>
+                        {% if message.attached_documents %}
+                        <small class="text-success">
+                            <i class="fas fa-paperclip me-1"></i>{{ message.attached_documents|length }} attachment(s)
+                        </small>
+                        {% endif %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-muted text-center py-3">No messages yet.</p>
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                <p class="text-muted mb-3">No messages yet.</p>
+                <a href="{{ url_for('employee_messages_send') }}" class="btn btn-primary btn-sm me-2">
+                    <i class="fas fa-paper-plane me-1"></i>Send Message
+                </a>
+                <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-headset me-1"></i>Contact Admin
+                </a>
+            </div>
             {% endif %}
         </div>
     </div>
@@ -105,58 +147,333 @@
 
 <!-- Quick Actions -->
 <div class="dashboard-widget">
-    <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+    <h5 class="mb-3"><i class="fas fa-bolt me-2 text-warning"></i>Quick Actions</h5>
     <div class="quick-actions">
         <a href="{{ url_for('employee_leave_request') }}" class="quick-action-btn">
             <i class="fas fa-plus-circle fa-2x mb-2 text-primary"></i>
             <div>Request Leave</div>
+            <small class="text-muted">Apply for time off</small>
         </a>
         <a href="{{ url_for('employee_messages_send') }}" class="quick-action-btn">
             <i class="fas fa-paper-plane fa-2x mb-2 text-success"></i>
             <div>Send Message</div>
+            <small class="text-muted">Message colleagues</small>
         </a>
         <a href="{{ url_for('employee_documents_upload') }}" class="quick-action-btn">
             <i class="fas fa-upload fa-2x mb-2 text-info"></i>
             <div>Upload Document</div>
+            <small class="text-muted">Share files</small>
         </a>
         <a href="{{ url_for('employee_todos_add') }}" class="quick-action-btn">
             <i class="fas fa-plus fa-2x mb-2 text-warning"></i>
             <div>Add Task</div>
+            <small class="text-muted">Create todo</small>
+        </a>
+        <a href="{{ url_for('employee_admin_messages_send') }}" class="quick-action-btn">
+            <i class="fas fa-headset fa-2x mb-2 text-danger"></i>
+            <div>Contact Admin</div>
+            <small class="text-muted">Get support</small>
+        </a>
+        <a href="{{ url_for('employee_documents') }}" class="quick-action-btn">
+            <i class="fas fa-folder fa-2x mb-2 text-purple"></i>
+            <div>My Documents</div>
+            <small class="text-muted">View files</small>
         </a>
     </div>
 </div>
 
-<!-- Upcoming Tasks -->
+<div class="row mt-4">
+    <!-- Upcoming Tasks -->
+    <div class="col-md-6">
+        <div class="dashboard-widget">
+            <h5 class="mb-3">
+                <i class="fas fa-tasks me-2 text-success"></i>Upcoming Tasks
+                <a href="{{ url_for('employee_todos') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
+            </h5>
+            {% if upcoming_todos %}
+            <div class="list-group list-group-flush">
+                {% for todo in upcoming_todos %}
+                <div class="list-group-item todo-item {% if todo.is_completed %}completed{% endif %} {{ todo.priority }}-priority">
+                    <div class="d-flex align-items-center">
+                        <div class="form-check me-3">
+                            <input class="form-check-input todo-checkbox" type="checkbox" 
+                                   {% if todo.is_completed %}checked{% endif %} 
+                                   onchange="this.form.submit()" form="todo-form-{{ todo.id }}">
+                        </div>
+                        <div class="flex-grow-1">
+                            <label class="form-check-label {% if todo.is_completed %}text-decoration-line-through text-muted{% endif %}">
+                                {{ todo.content }}
+                            </label>
+                            {% if todo.due_date %}
+                            <div class="mt-1">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Due: {{ todo.due_date }}
+                                    {% if todo.due_date == today %}
+                                    <span class="badge bg-warning ms-1">Today</span>
+                                    {% elif todo.due_date < today %}
+                                    <span class="badge bg-danger ms-1">Overdue</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-{{ 'danger' if todo.priority == 'high' else 'warning' if todo.priority == 'medium' else 'info' }}">
+                            {{ todo.priority|title }}
+                        </span>
+                    </div>
+                    <form id="todo-form-{{ todo.id }}" action="{{ url_for('employee_todo_update', todo_id=todo.id) }}" method="POST" style="display: none;">
+                        <input type="hidden" name="is_completed" value="{{ not todo.is_completed }}">
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-2x text-muted mb-3"></i>
+                <p class="text-muted mb-3">No upcoming tasks. Enjoy your day!</p>
+                <a href="{{ url_for('employee_todos_add') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Task
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Documents & Admin Messages -->
+    <div class="col-md-6">
+        <div class="dashboard-widget mb-4">
+            <h5 class="mb-3">
+                <i class="fas fa-file-alt me-2 text-purple"></i>Recent Documents
+                <a href="{{ url_for('employee_documents') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
+            </h5>
+            {% if recent_documents %}
+            <div class="list-group list-group-flush">
+                {% for doc in recent_documents[:3] %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 small">{{ doc.original_filename|truncate(25) }}</h6>
+                            <small class="text-muted">{{ format_file_size(doc.file_size) }} • {{ doc.created_at.strftime('%b %d') }}</small>
+                        </div>
+                        <a href="{{ url_for('employee_document_download', doc_id=doc.id) }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">No documents uploaded yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-widget">
+            <h5 class="mb-3">
+                <i class="fas fa-headset me-2 text-danger"></i>Admin Messages
+                <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
+            </h5>
+            {% if admin_messages %}
+            <div class="list-group list-group-flush">
+                {% for message in admin_messages[:2] %}
+                <div class="list-group-item {% if not message.is_read %}unread-message{% endif %}">
+                    <h6 class="mb-1">{{ message.subject|truncate(30) }}</h6>
+                    <small class="text-muted">{{ message.created_at.strftime('%b %d') }}</small>
+                    <div class="mt-1">
+                        {% if message.admin_response %}
+                        <span class="badge bg-success">Replied</span>
+                        {% else %}
+                        <span class="badge bg-warning">Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">No messages to admin.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- System Announcements -->
+{% if announcements %}
 <div class="dashboard-widget mt-4">
     <h5 class="mb-3">
-        <i class="fas fa-tasks me-2"></i>Upcoming Tasks
-        <a href="{{ url_for('employee_todos') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
+        <i class="fas fa-bullhorn me-2 text-warning"></i>System Announcements
     </h5>
-    {% if upcoming_todos %}
     <div class="list-group list-group-flush">
-        {% for todo in upcoming_todos %}
-        <div class="list-group-item todo-item {% if todo.is_completed %}completed{% endif %} {{ todo.priority }}-priority">
-            <div class="form-check">
-                <input class="form-check-input todo-checkbox" type="checkbox" {% if todo.is_completed %}checked{% endif %} 
-                       onchange="this.form.submit()" form="todo-form-{{ todo.id }}">
-                <label class="form-check-label {% if todo.is_completed %}text-decoration-line-through{% endif %}">
-                    {{ todo.content }}
-                </label>
-                {% if todo.due_date %}
-                <small class="text-muted float-end">
-                    Due: {{ todo.due_date }}
-                    {% if todo.due_date == today %}<span class="badge bg-warning ms-1">Today</span>{% endif %}
-                </small>
-                {% endif %}
+        {% for announcement in announcements %}
+        <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1 text-primary">{{ announcement.title }}</h6>
+                <small>{{ announcement.created_at.strftime('%b %d') }}</small>
             </div>
-            <form id="todo-form-{{ todo.id }}" action="{{ url_for('employee_todo_update', todo_id=todo.id) }}" method="POST" style="display: none;">
-                <input type="hidden" name="is_completed" value="{{ not todo.is_completed }}">
-            </form>
+            <p class="mb-1">{{ announcement.content[:150] }}{% if announcement.content|length > 150 %}...{% endif %}</p>
         </div>
         {% endfor %}
     </div>
-    {% else %}
-    <p class="text-muted text-center py-3">No upcoming tasks. Enjoy your day!</p>
-    {% endif %}
 </div>
+{% endif %}
+
+<!-- Quick Stats -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="dashboard-widget text-center">
+            <h6><i class="fas fa-user-clock me-2 text-info"></i>Today</h6>
+            <div class="number text-primary">{{ today.strftime('%A, %b %d') }}</div>
+            <small class="text-muted">{{ today.strftime('%Y') }}</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="dashboard-widget text-center">
+            <h6><i class="fas fa-building me-2 text-success"></i>Department</h6>
+            <div class="number text-success">{{ current_user.department }}</div>
+            <small class="text-muted">{{ current_user.position }}</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="dashboard-widget text-center">
+            <h6><i class="fas fa-calendar-check me-2 text-warning"></i>Service</h6>
+            <div class="number text-warning">
+                {% set years = (today - current_user.hire_date).days // 365 %}
+                {{ years }} year{% if years != 1 %}s{% endif %}
+            </div>
+            <small class="text-muted">Since {{ current_user.hire_date.strftime('%b %Y') }}</small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize todo interactions
+    initTodoInteractions();
+    
+    // Initialize message read functionality
+    initMessageInteractions();
+    
+    // Add click handlers for unread messages
+    document.querySelectorAll('.unread-message').forEach(item => {
+        item.addEventListener('click', function() {
+            const messageId = this.closest('[data-message-id]')?.dataset.messageId;
+            if (messageId) {
+                markMessageAsRead(messageId, this);
+            }
+        });
+    });
+
+    // Auto-refresh dashboard data every 2 minutes
+    setInterval(() => {
+        // You could implement AJAX refresh here
+        console.log('Refreshing dashboard data...');
+    }, 120000);
+
+    // Add animation to stat cards on load
+    document.querySelectorAll('.stat-card').forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('animate__animated', 'animate__fadeInUp');
+    });
+});
+</script>
+
+<style>
+.stat-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.quick-action-btn {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: var(--dark);
+    display: block;
+}
+
+.quick-action-btn:hover {
+    border-color: var(--secondary);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    text-decoration: none;
+    color: var(--dark);
+}
+
+.unread-message {
+    border-left: 4px solid #ffc107;
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+.todo-item {
+    border-left: 4px solid #6c757d;
+    transition: all 0.3s ease;
+}
+
+.todo-item.high-priority {
+    border-left-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.todo-item.medium-priority {
+    border-left-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+.todo-item.low-priority {
+    border-left-color: #0dcaf0;
+    background-color: rgba(13, 202, 240, 0.05);
+}
+
+.todo-item.completed {
+    opacity: 0.7;
+    border-left-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.todo-item:hover {
+    transform: translateX(5px);
+}
+
+.todo-checkbox {
+    transform: scale(1.2);
+}
+
+@media (max-width: 768px) {
+    .quick-actions {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .quick-action-btn {
+        padding: 15px 10px;
+    }
+    
+    .stat-card .number {
+        font-size: 1.8rem;
+    }
+}
+
+.animate__animated {
+    animation-duration: 0.6s;
+}
+
+.text-decoration-line-through {
+    text-decoration: line-through;
+}
+</style>
 {% endblock %}

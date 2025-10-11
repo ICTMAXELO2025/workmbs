@@ -2,36 +2,45 @@
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Contact Admin</h1>
+    <h1 class="h2">Send Message to Admin</h1>
     <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-outline-secondary">
         <i class="fas fa-arrow-left me-2"></i>Back to Messages
     </a>
 </div>
 
 <div class="dashboard-widget">
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="subject" class="form-label">Subject</label>
-            <input type="text" class="form-control" id="subject" name="subject" required placeholder="Brief subject of your message">
+            <input type="text" class="form-control" id="subject" name="subject" required 
+                   placeholder="Enter message subject...">
         </div>
         
         <div class="mb-3">
             <label for="content" class="form-label">Message</label>
-            <textarea class="form-control" id="content" name="content" rows="8" required placeholder="Please describe your issue, question, or request in detail..."></textarea>
+            <textarea class="form-control" id="content" name="content" rows="8" required 
+                      placeholder="Type your message to admin..."></textarea>
         </div>
-        
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Note:</strong> Your message will be sent directly to the system administrator. 
-            Please provide as much detail as possible to help us assist you better.
+
+        <!-- Document Attachment -->
+        <div class="mb-3">
+            <label for="document" class="form-label">Attach Document (Optional)</label>
+            <input type="file" class="form-control" id="document" name="document" 
+                   accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xlsx,.xls,.pptx,.ppt,.csv">
+            <div class="form-text">Supported formats: PDF, Word, Excel, PowerPoint, Images, Text files (Max 16MB)</div>
         </div>
         
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">
-                <i class="fas fa-paper-plane me-2"></i>Send to Admin
+                <i class="fas fa-paper-plane me-2"></i>Send Message to Admin
             </button>
             <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-outline-secondary">Cancel</a>
         </div>
     </form>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h6><i class="fas fa-info-circle me-2"></i>Message to Admin</h6>
+    <p class="mb-0">Your message will be sent directly to the system administrators. You can attach documents if needed, and you'll receive a response in this messaging system.</p>
 </div>
 {% endblock %}

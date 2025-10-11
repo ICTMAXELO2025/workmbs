@@ -93,7 +93,7 @@
                 {% for message in recent_messages %}
                 <div class="list-group-item {% if not message.is_read %}bg-light{% endif %}">
                     <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">{{ message.employee.name }}</h6>
+                        <h6 class="mb-1">{{ message.sender.name if message.sender else 'Unknown Employee' }}</h6>
                         <small>{{ message.created_at.strftime('%b %d') }}</small>
                     </div>
                     <h6 class="mb-1">{{ message.subject }}</h6>
@@ -131,6 +131,23 @@
             <i class="fas fa-users fa-2x mb-2 text-warning"></i>
             <div>Manage Employees</div>
         </a>
+        <!-- NEW ACTIONS -->
+        <a href="{{ url_for('admin_send_message') }}" class="quick-action-btn">
+            <i class="fas fa-envelope fa-2x mb-2 text-danger"></i>
+            <div>Send Message</div>
+        </a>
+        <a href="{{ url_for('admin_todo_add') }}" class="quick-action-btn">
+            <i class="fas fa-tasks fa-2x mb-2 text-secondary"></i>
+            <div>Create Todo</div>
+        </a>
+        <a href="{{ url_for('admin_document_add') }}" class="quick-action-btn">
+            <i class="fas fa-file-upload fa-2x mb-2 text-purple"></i>
+            <div>Upload Document</div>
+        </a>
+        <a href="{{ url_for('admin_documents') }}" class="quick-action-btn">
+            <i class="fas fa-folder fa-2x mb-2 text-teal"></i>
+            <div>Manage Documents</div>
+        </a>
     </div>
 </div>
 
@@ -144,10 +161,10 @@
                 <small class="text-muted">Just now</small>
             </div>
         </div>
-        {% if recent_leaves %}
+        {% if pending_leaves %}
         <div class="list-group-item">
             <div class="d-flex w-100 justify-content-between">
-                <small>{{ recent_leaves|length }} pending leave requests need attention</small>
+                <small>{{ pending_leaves|length }} pending leave requests need attention</small>
                 <small class="text-muted">Today</small>
             </div>
         </div>
@@ -160,6 +177,67 @@
             </div>
         </div>
         {% endif %}
+        {% if total_employees %}
+        <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+                <small>{{ total_employees }} active employees in system</small>
+                <small class="text-muted">Current</small>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Additional Statistics -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="dashboard-widget">
+            <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Quick Stats</h5>
+            <div class="row text-center">
+                <div class="col-4">
+                    <div class="stat-item">
+                        <div class="number text-primary">{{ (pending_leaves|length if pending_leaves else 0) }}</div>
+                        <div class="label small">Pending Leaves</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-item">
+                        <div class="number text-info">{{ (recent_messages|length if recent_messages else 0) }}</div>
+                        <div class="label small">New Messages</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-item">
+                        <div class="number text-success">{{ active_employees }}</div>
+                        <div class="label small">Active Staff</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="dashboard-widget">
+            <h5 class="mb-3"><i class="fas fa-bell me-2"></i>Notifications</h5>
+            {% if pending_leaves or recent_messages %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                You have {{ (pending_leaves|length if pending_leaves else 0) + (recent_messages|selectattr('is_read', 'false')|list|length if recent_messages else 0) }} pending items requiring attention.
+            </div>
+            {% else %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                All caught up! No pending items requiring immediate attention.
+            </div>
+            {% endif %}
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('admin_leave_requests') }}" class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-clock me-1"></i>Review Leave Requests
+                </a>
+                <a href="{{ url_for('admin_messages') }}" class="btn btn-outline-info btn-sm">
+                    <i class="fas fa-inbox me-1"></i>Check Messages
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

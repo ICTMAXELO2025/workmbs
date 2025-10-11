@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Documents - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Manage Documents</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_document_add') }}" class="btn btn-primary">
+            <i class="fas fa-file-upload me-2"></i>Upload Document
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-widget">
+    {% if documents %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Employee</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                    <th>Uploaded By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr>
+                    <td>{{ doc.original_filename }}</td>
+                    <td>{{ doc.employee.name }}</td>
+                    <td>{{ doc.description or 'No description' }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'primary' if doc.document_type == 'contract' else 'info' if doc.document_type == 'policy' else 'success' if doc.document_type == 'hr' else 'warning' if doc.document_type == 'payslip' else 'danger' if doc.document_type == 'training' else 'secondary' }}">
+                            {{ doc.document_type|title }}
+                        </span>
+                    </td>
+                    <td>{{ format_file_size(doc.file_size) }}</td>
+                    <td>{{ doc.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        {% if doc.uploaded_by_admin %}
+                        <span class="badge bg-info">Admin</span>
+                        {% else %}
+                        <span class="badge bg-success">Employee</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="#" class="btn btn-outline-primary" title="Download">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% if doc.uploaded_by_admin %}
+                            <a href="#" class="btn btn-outline-danger" 
+                               onclick="return confirm('Are you sure you want to delete this document?')"
+                               title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+        <h4>No Documents</h4>
+        <p class="text-muted">There are no documents in the system yet.</p>
+        <a href="{{ url_for('admin_document_add') }}" class="btn btn-primary">Upload First Document</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent Uploads -->
+<div class="dashboard-widget mt-4">
+    <h5 class="mb-3"><i class="fas fa-history me-2"></i>Recent Uploads</h5>
+    {% if recent_documents %}
+    <div class="list-group list-group-flush">
+        {% for doc in recent_documents %}
+        <div class="list-group-item px-0">
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1 small">{{ doc.original_filename|truncate(25) }}</h6>
+                <small>{{ doc.created_at.strftime('%m/%d') }}</small>
+            </div>
+            <p class="mb-1 small text-muted">{{ doc.employee.name }}</p>
+            <small class="text-muted">{{ doc.description|truncate(30) if doc.description else 'No description' }}</small>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted text-center py-3">No recent document uploads</p>
+    {% endif %}
+</div>
+{% endblock %}

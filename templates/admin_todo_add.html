@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Create Todo</h1>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<div class="dashboard-widget">
+    <form method="POST">
+        <div class="mb-3">
+            <label for="employee_id" class="form-label">Assign To</label>
+            <select class="form-select" id="employee_id" name="employee_id" required>
+                <option value="">Select Employee</option>
+                {% for employee in employees %}
+                <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="content" class="form-label">Task Description</label>
+            <textarea class="form-control" id="content" name="content" rows="4" required placeholder="Enter task description..."></textarea>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="priority" class="form-label">Priority</label>
+                    <select class="form-select" id="priority" name="priority" required>
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="due_date" class="form-label">Due Date (Optional)</label>
+                    <input type="date" class="form-control" id="due_date" name="due_date" min="{{ today }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Todo
+            </button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
