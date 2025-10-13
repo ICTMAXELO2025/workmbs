@@ -3,9 +3,7 @@ services:
     name: company-management-system
     env: python
     plan: free
-    buildCommand: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
+    buildCommand: ./build.sh
     startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: SECRET_KEY

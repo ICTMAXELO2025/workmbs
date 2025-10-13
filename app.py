@@ -23,7 +23,7 @@ def get_database_uri():
         return database_url
     
     # Fallback to local PostgreSQL for development
-    return 'postgresql://postgres:Maxelo%402023@localhost:5432/management_db'
+    return 'postgresql://postgres:Maxelo%402023@localhost:5432/managment_db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -137,6 +137,22 @@ app.jinja_env.globals.update(get_database_info=get_database_info)
 def index():
     """Main index page with links to both login types"""
     return render_template('index.html')
+
+import time
+from flask import request
+import logging
+
+@app.before_request
+def before_request():
+    request.start_time = time.time()
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        elapsed = time.time() - request.start_time
+        if elapsed > 1.0:  # Log slow requests (>1 second)
+            logging.warning(f"Slow request: {request.path} took {elapsed:.2f}s")
+    return response
 
 # Authentication Routes
 @app.route('/employee/login', methods=['GET', 'POST'])
