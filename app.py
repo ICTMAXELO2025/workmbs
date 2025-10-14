@@ -11,6 +11,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 
 # Database configuration - PostgreSQL only
+# Database configuration - PostgreSQL only
 def get_database_uri():
     """Get database URI based on environment"""
     # Check for PostgreSQL URL first (for production/Render)
@@ -62,11 +63,14 @@ def setup_database():
             
         except Exception as e:
             print(f"Database setup error: {e}")
-            raise e
+            # Don't raise the error, just log it
+            import traceback
+            traceback.print_exc()
 
-# Initialize database
-setup_database()
-
+# Initialize database on first request
+@app.before_first_request
+def create_tables():
+    setup_database()
 def login_required(role=None):
     """Decorator to require login and optionally specific role"""
     def decorator(f):
