@@ -5,11 +5,9 @@ from datetime import datetime, date
 import os
 import re
 from functools import wraps
-import time
-import logging
 
-# Initialize Flask app once - REMOVED DUPLICATE
-app = Flask(__name__, static_folder='static', static_url_path='/static')
+# Initialize Flask app first
+app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 
 # Database configuration - PostgreSQL only
@@ -34,7 +32,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True
 }
 
-# Import models after app configuration
+# Import models after app initialization
 from models import db, Employee, Admin, LeaveRequest, Message, Todo, Document, AdminMessage, Announcement, MessageDocument, AdminMessageDocument, AdminAssignedTodo
 
 # Initialize database with app
@@ -64,9 +62,11 @@ def setup_database():
             
         except Exception as e:
             print(f"Database setup error: {e}")
+            # Don't raise the error, just log it
             import traceback
             traceback.print_exc()
 
+# Modern approach for database initialization
 def initialize_database():
     """Initialize database when app starts"""
     try:
@@ -76,7 +76,7 @@ def initialize_database():
         print(f"Database initialization note: {e}")
         print("This is normal if database isn't ready yet - tables will be created on first request")
 
-# Initialize database
+# Initialize database (but don't crash if it fails)
 initialize_database()
 
 def login_required(role=None):
@@ -150,6 +150,10 @@ def index():
     """Main index page with links to both login types"""
     return render_template('index.html')
 
+import time
+from flask import request
+import logging
+
 @app.before_request
 def before_request():
     request.start_time = time.time()
@@ -158,7 +162,7 @@ def before_request():
 def after_request(response):
     if hasattr(request, 'start_time'):
         elapsed = time.time() - request.start_time
-        if elapsed > 1.0:
+        if elapsed > 1.0:  # Log slow requests (>1 second)
             logging.warning(f"Slow request: {request.path} took {elapsed:.2f}s")
     return response
 
@@ -180,7 +184,10 @@ def employee_login():
             employee = Employee.query.filter_by(email=email, is_active=True).first()
             
             if employee and check_password_hash(employee.password, password):
+                # Clear any existing session
                 session.clear()
+                
+                # Set new session
                 session['user_id'] = employee.id
                 session['user_role'] = 'employee'
                 session['user_name'] = employee.name
@@ -219,6 +226,7 @@ def admin_login():
             
             if admin and check_password_hash(admin.password, password):
                 session.clear()
+                
                 session['user_id'] = admin.id
                 session['user_role'] = 'admin'
                 session['user_name'] = admin.name
@@ -239,11 +247,13 @@ def admin_login():
     
     return render_template('admin_login.html')
 
-# Quick Access Routes
+# Quick Access Routes (for development/demo)
 @app.route('/employee/quick')
 def employee_quick_access():
+    """Quick access for demo purposes"""
     key = request.args.get('key', '')
     if key == 'employee123':
+        # Create or get demo employee
         demo_employee = Employee.query.filter_by(email='demo@employee.com').first()
         if not demo_employee:
             demo_employee = Employee(
@@ -271,8 +281,10 @@ def employee_quick_access():
 
 @app.route('/admin/quick')
 def admin_quick_access():
+    """Quick access for demo purposes"""
     key = request.args.get('key', '')
     if key == 'maxelo':
+        # Create or get demo admin
         demo_admin = Admin.query.filter_by(email='admin@maxelo.com').first()
         if not demo_admin:
             demo_admin = Admin(
@@ -295,8 +307,10 @@ def admin_quick_access():
     flash('Invalid quick access key', 'error')
     return redirect(url_for('admin_login'))
 
+# Logout Routes
 @app.route('/logout')
 def logout():
+    """General logout route"""
     user_role = session.get('user_role')
     session.clear()
     flash('You have been logged out successfully.', 'info')
@@ -316,7 +330,7 @@ def employee_dashboard():
             flash('User not found', 'error')
             return redirect(url_for('logout'))
         
-        # Get statistics
+        # Get statistics with proper error handling
         pending_leaves = LeaveRequest.query.filter_by(
             employee_id=current_user.id, 
             status='pending'
@@ -381,6 +395,7 @@ def employee_dashboard():
                              
     except Exception as e:
         flash('Error loading dashboard', 'error')
+        # Provide safe fallback values
         return render_template('employee_dashboard.html',
                              pending_leaves=0,
                              unread_messages=0,
@@ -420,6 +435,7 @@ def employee_leave_request():
             end_date_str = request.form.get('end_date')
             reason = request.form.get('reason', '').strip()
             
+            # Validation
             if not all([leave_type, start_date_str, end_date_str]):
                 flash('Please fill in all required fields', 'error')
                 return render_template('employee_leave_request.html', current_user=current_user)
@@ -485,6 +501,7 @@ def employee_messages_send():
                 flash('Please fill in all required fields', 'error')
                 return redirect(url_for('employee_messages_send'))
             
+            # Check if receiver exists and is not the current user
             receiver = Employee.query.filter_by(id=receiver_id, is_active=True).first()
             if not receiver:
                 flash('Invalid recipient selected', 'error')
@@ -510,11 +527,13 @@ def employee_messages_send():
             db.session.rollback()
             flash('Error sending message', 'error')
     
+    # Get active employees for recipient selection (excluding current user)
     employees = Employee.query.filter(
         Employee.is_active == True,
         Employee.id != current_user.id
     ).all()
     
+    # Get recent contacts (last 5 people messaged)
     recent_contacts = Employee.query.join(
         Message, Employee.id == Message.receiver_id
     ).filter(
@@ -557,15 +576,16 @@ def employee_documents_upload():
             
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                file.seek(0, 2)
-                file_size = file.tell()
-                file.seek(0)
+                # Get file size without reading entire file
+                file.seek(0, 2)  # Seek to end
+                file_size = file.tell()  # Get position (file size)
+                file.seek(0)  # Reset to beginning
                 
                 document = Document(
                     employee_id=current_user.id,
                     filename=filename,
                     original_filename=filename,
-                    file_path=f"/uploads/{filename}",
+                    file_path=f"/uploads/{filename}",  # Placeholder
                     file_size=file_size,
                     description=request.form.get('description', '').strip(),
                     uploaded_by_admin=False
@@ -584,118 +604,18 @@ def employee_documents_upload():
     
     return render_template('employee_documents_upload.html', current_user=current_user)
 
-# Employee Todos - FIXED COMPLETE FUNCTION
+# Employee Todos
 @app.route('/employee/todos')
 @login_required(role='employee')
 def employee_todos():
-    try:
-        current_user = get_current_user()
-        if not current_user:
-            flash('User not found', 'error')
-            return redirect(url_for('logout'))
-        
-        # Get all todos for the current user
-        todos = Todo.query.filter_by(
-            employee_id=current_user.id
-        ).order_by(
-            Todo.is_completed.asc(),
-            Todo.due_date.asc(),
-            Todo.priority.desc()
-        ).all()
-        
-        # Categorize todos for better organization
-        pending_todos = [todo for todo in todos if not todo.is_completed]
-        completed_todos = [todo for todo in todos if todo.is_completed]
-        high_priority_todos = [todo for todo in pending_todos if todo.priority in ['high', 'urgent']]
-        overdue_todos = [todo for todo in pending_todos if todo.due_date and todo.due_date < date.today()]
-        
-        # Get counts for the sidebar
-        pending_todos_count = len(pending_todos)
-        unread_messages_count = Message.query.filter_by(
-            receiver_id=current_user.id, 
-            is_read=False
-        ).count()
-        
-        return render_template('employee_todos.html', 
-                             todos=todos,
-                             pending_todos=pending_todos,
-                             completed_todos=completed_todos,
-                             high_priority_todos=high_priority_todos,
-                             overdue_todos=overdue_todos,
-                             pending_todos_count=pending_todos_count,
-                             unread_messages_count=unread_messages_count,
-                             today=date.today(),
-                             current_user=current_user)
-                             
-    except Exception as e:
-        print(f"Error in employee_todos: {e}")
-        flash('Error loading tasks. Please try again.', 'error')
-        return render_template('employee_todos.html',
-                             todos=[],
-                             pending_todos=[],
-                             completed_todos=[],
-                             high_priority_todos=[],
-                             overdue_todos=[],
-                             pending_todos_count=0,
-                             unread_messages_count=0,
-                             today=date.today(),
-                             current_user=get_current_user())
-
-@app.route('/employee/todo/<int:todo_id>/edit', methods=['GET', 'POST'])
-@login_required(role='employee')
-def employee_todo_edit(todo_id):
     current_user = get_current_user()
+    todos = Todo.query.filter_by(
+        employee_id=current_user.id
+    ).order_by(Todo.due_date.asc(), Todo.priority.desc()).all()
     
-    todo = Todo.query.filter_by(id=todo_id, employee_id=current_user.id).first()
-    if not todo:
-        flash('Task not found', 'error')
-        return redirect(url_for('employee_todos'))
-    
-    if request.method == 'POST':
-        try:
-            todo.content = request.form.get('content', '').strip()
-            todo.priority = request.form.get('priority', 'medium')
-            todo.category = request.form.get('category', '')
-            todo.is_important = 'is_important' in request.form
-            
-            due_date_str = request.form.get('due_date')
-            todo.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else None
-            
-            db.session.commit()
-            flash('Task updated successfully!', 'success')
-            return redirect(url_for('employee_todos'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash('Error updating task', 'error')
-    
-    return render_template('employee_todo_edit.html', 
-                         todo=todo,
-                         current_user=current_user,
-                         today=date.today())
-
-@app.route('/employee/todos/clear-completed', methods=['POST'])
-@login_required(role='employee')
-def employee_todos_clear_completed():
-    current_user = get_current_user()
-    
-    try:
-        completed_todos = Todo.query.filter_by(
-            employee_id=current_user.id,
-            is_completed=True
-        ).all()
-        
-        for todo in completed_todos:
-            db.session.delete(todo)
-        
-        db.session.commit()
-        flash(f'Cleared {len(completed_todos)} completed tasks!', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash('Error clearing completed tasks', 'error')
-    
-    return redirect(url_for('employee_todos'))
+    return render_template('employee_todos.html', 
+                         todos=todos, 
+                         current_user=current_user)
 
 @app.route('/employee/todos/add', methods=['GET', 'POST'])
 @login_required(role='employee')
@@ -707,31 +627,23 @@ def employee_todos_add():
             content = request.form.get('content', '').strip()
             priority = request.form.get('priority', 'medium')
             due_date_str = request.form.get('due_date')
-            category = request.form.get('category', '')
-            is_important = 'is_important' in request.form
             
             if not content:
                 flash('Task description is required', 'error')
-                return render_template('employee_todos_add.html', 
-                                     current_user=current_user,
-                                     today=date.today())
+                return render_template('employee_todos_add.html', current_user=current_user)
             
             due_date = None
             if due_date_str:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
                 if due_date < date.today():
                     flash('Due date cannot be in the past', 'error')
-                    return render_template('employee_todos_add.html',
-                                         current_user=current_user,
-                                         today=date.today())
+                    return render_template('employee_todos_add.html', current_user=current_user)
             
             todo = Todo(
                 employee_id=current_user.id,
                 content=content,
                 priority=priority,
-                due_date=due_date,
-                category=category,
-                is_important=is_important
+                due_date=due_date
             )
             
             db.session.add(todo)
@@ -745,9 +657,7 @@ def employee_todos_add():
             db.session.rollback()
             flash('Error adding task', 'error')
     
-    return render_template('employee_todos_add.html',
-                         current_user=current_user,
-                         today=date.today())
+    return render_template('employee_todos_add.html', current_user=current_user)
 
 @app.route('/employee/todo/<int:todo_id>/update', methods=['POST'])
 @login_required(role='employee')
@@ -791,7 +701,7 @@ def employee_todo_delete(todo_id):
     
     return redirect(url_for('employee_todos'))
 
-# Admin Dashboard - REMOVED DUPLICATE
+# Admin Dashboard
 @app.route('/admin/dashboard')
 @login_required(role='admin')
 def admin_dashboard():
@@ -802,24 +712,20 @@ def admin_dashboard():
         pending_leave_requests = LeaveRequest.query.filter_by(status='pending').count()
         unread_admin_messages = AdminMessage.query.filter_by(is_read=False).count()
         active_employees = Employee.query.filter_by(is_active=True).count()
-        pending_tasks_count = Todo.query.filter_by(is_completed=False).count()
-        total_documents = Document.query.count()
         
-        pending_leaves = LeaveRequest.query.filter_by(status='pending').options(
-            db.joinedload(LeaveRequest.employee)
-        ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
+        pending_leaves = LeaveRequest.query.filter_by(status='pending').order_by(
+            LeaveRequest.created_at.desc()
+        ).limit(5).all()
         
         recent_messages = AdminMessage.query.options(
             db.joinedload(AdminMessage.sender)
-        ).order_by(AdminMessage.created_at.desc()).limit(3).all()
+        ).order_by(AdminMessage.created_at.desc()).limit(5).all()
         
         return render_template('admin_dashboard.html',
                              total_employees=total_employees,
                              pending_leave_requests=pending_leave_requests,
                              unread_admin_messages=unread_admin_messages,
                              active_employees=active_employees,
-                             pending_tasks_count=pending_tasks_count,
-                             total_documents=total_documents,
                              pending_leaves=pending_leaves,
                              recent_messages=recent_messages,
                              current_user=current_user)
@@ -831,8 +737,6 @@ def admin_dashboard():
                              pending_leave_requests=0,
                              unread_admin_messages=0,
                              active_employees=0,
-                             pending_tasks_count=0,
-                             total_documents=0,
                              pending_leaves=[],
                              recent_messages=[],
                              current_user=current_user)
@@ -867,6 +771,7 @@ def admin_employees_add():
                 flash('Please fill in all required fields', 'error')
                 return render_template('admin_employees_add.html', current_user=current_user)
             
+            # Check if email already exists
             existing_employee = Employee.query.filter_by(email=email).first()
             if existing_employee:
                 flash('Email already exists', 'error')
@@ -1018,7 +923,7 @@ def update_profile():
                 return redirect(url_for('profile'))
         
         db.session.commit()
-        session['user_name'] = current_user.name
+        session['user_name'] = current_user.name  # Update session
         flash('Profile updated successfully!', 'success')
         
     except Exception as e:
@@ -1100,6 +1005,7 @@ def admin_send_message():
                 flash('Please fill in all required fields', 'error')
                 return redirect(url_for('admin_send_message'))
             
+            # Get recipients based on selection
             if recipient_type == 'all':
                 recipients = Employee.query.filter_by(is_active=True).all()
                 selected_employees = request.form.getlist('selected_employees')
@@ -1122,9 +1028,10 @@ def admin_send_message():
                 flash('No valid recipients selected', 'error')
                 return redirect(url_for('admin_send_message'))
             
+            # Create messages for each recipient
             for recipient in recipients:
                 message = Message(
-                    sender_id=current_user.id,
+                    sender_id=current_user.id,  # Admin sending as themselves
                     receiver_id=recipient.id,
                     subject=subject,
                     content=content
@@ -1192,6 +1099,7 @@ def admin_document_add():
             
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
+                # Get file size without reading entire file
                 file.seek(0, 2)
                 file_size = file.tell()
                 file.seek(0)
@@ -1200,7 +1108,7 @@ def admin_document_add():
                     employee_id=employee_id,
                     filename=filename,
                     original_filename=filename,
-                    file_path=f"/uploads/{filename}",
+                    file_path=f"/uploads/{filename}",  # Placeholder
                     file_size=file_size,
                     description=description,
                     document_type=document_type,
@@ -1214,6 +1122,7 @@ def admin_document_add():
                 db.session.commit()
                 
                 if send_notification:
+                    # In production, send email notification
                     pass
                 
                 flash('Document uploaded successfully!', 'success')
@@ -1235,12 +1144,11 @@ def admin_document_add():
                          recent_documents=recent_documents,
                          current_user=current_user)
 
-# Admin Todo Management - FIXED DUPLICATE
+# Admin Todo Management
 @app.route('/admin/todo/add', methods=['GET', 'POST'])
 @login_required(role='admin')
 def admin_todo_add():
     current_user = get_current_user()
-    employees = Employee.query.filter_by(is_active=True).order_by(Employee.name.asc()).all()
     
     if request.method == 'POST':
         try:
@@ -1248,24 +1156,17 @@ def admin_todo_add():
             content = request.form.get('content', '').strip()
             priority = request.form.get('priority', 'medium')
             due_date_str = request.form.get('due_date')
-            send_notification = 'send_notification' in request.form
             
             if not all([employee_id, content]):
                 flash('Please fill in all required fields', 'error')
-                return render_template('admin_todo_add.html',
-                                     employees=employees,
-                                     current_user=current_user,
-                                     today=date.today())
+                return render_template('admin_todo_add.html', current_user=current_user)
             
             due_date = None
             if due_date_str:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
                 if due_date < date.today():
                     flash('Due date cannot be in the past', 'error')
-                    return render_template('admin_todo_add.html',
-                                         employees=employees,
-                                         current_user=current_user,
-                                         today=date.today())
+                    return render_template('admin_todo_add.html', current_user=current_user)
             
             # Create admin assigned todo
             admin_todo = AdminAssignedTodo(
@@ -1281,16 +1182,12 @@ def admin_todo_add():
                 employee_id=employee_id,
                 content=f"[From Admin] {content}",
                 priority=priority,
-                due_date=due_date,
-                assigned_by_admin=True
+                due_date=due_date
             )
             
             db.session.add(admin_todo)
             db.session.add(employee_todo)
             db.session.commit()
-            
-            if send_notification:
-                pass
             
             flash('Task assigned successfully!', 'success')
             return redirect(url_for('admin_dashboard'))
@@ -1301,10 +1198,11 @@ def admin_todo_add():
             db.session.rollback()
             flash('Error assigning task', 'error')
     
+    employees = Employee.query.filter_by(is_active=True).order_by(Employee.name.asc()).all()
     return render_template('admin_todo_add.html',
                          employees=employees,
-                         current_user=current_user,
-                         today=date.today())
+                         today=date.today(),
+                         current_user=current_user)
 
 # Employee Admin Messages
 @app.route('/employee/admin-messages')
@@ -1362,6 +1260,7 @@ def employee_document_download(doc_id):
             flash('Document not found', 'error')
             return redirect(url_for('employee_documents'))
         
+        # In production, serve the actual file
         flash('Download functionality would be implemented in production', 'info')
         return redirect(url_for('employee_documents'))
         
@@ -1400,6 +1299,7 @@ def forgot_password():
             flash('Please enter your email address', 'error')
             return render_template('forgot_password.html')
         
+        # In production, send reset email
         flash('If an account exists with this email, a password reset link has been sent.', 'info')
         return redirect(url_for('employee_login'))
     
@@ -1423,6 +1323,7 @@ def reset_password():
             flash('Password must be at least 6 characters long', 'error')
             return render_template('reset_password.html')
         
+        # In production, update password in database
         flash('Password reset successfully! Please log in with your new password.', 'success')
         return redirect(url_for('employee_login'))
     
@@ -1458,31 +1359,6 @@ def health_check():
             'status': 'unhealthy', 
             'error': str(e),
             'database_type': get_database_info()
-        }), 500
-
-# Debug route for tasks
-@app.route('/debug/todos')
-@login_required(role='employee')
-def debug_todos():
-    current_user = get_current_user()
-    try:
-        # Test database connection
-        db.session.execute('SELECT 1')
-        
-        # Test Todo query
-        todos_count = Todo.query.filter_by(employee_id=current_user.id).count()
-        
-        return jsonify({
-            'status': 'success',
-            'user_id': current_user.id,
-            'todos_count': todos_count,
-            'database': 'connected'
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'user_id': current_user.id if current_user else None
         }), 500
 
 if __name__ == '__main__':
