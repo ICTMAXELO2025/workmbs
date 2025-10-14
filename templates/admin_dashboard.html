@@ -6,69 +6,155 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Admin Dashboard</h2>
-            <span class="badge bg-success">Administrator</span>
+            <div>
+                <h2><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h2>
+                <p class="text-muted mb-0">Welcome back, {{ current_user.name }}! Here's what's happening today.</p>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success fs-6">
+                    <i class="fas fa-user-shield me-1"></i>Administrator
+                </span>
+                <div class="dropdown ms-3">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('admin_employees') }}"><i class="fas fa-users me-2"></i>Manage Employees</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user-cog me-2"></i>Profile Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('health_check') }}"><i class="fas fa-heartbeat me-2"></i>System Health</a></li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Statistics Cards -->
 <div class="row">
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-users fa-2x text-primary mb-2"></i>
-            <h3>{{ total_employees }}</h3>
-            <p class="text-muted">Total Employees</p>
+    <div class="col-xl-2 col-md-4 col-6 mb-4">
+        <div class="stat-card text-center h-100">
+            <div class="stat-icon bg-primary bg-opacity-10 rounded-circle mx-auto mb-3">
+                <i class="fas fa-users fa-lg text-primary"></i>
+            </div>
+            <h3 class="text-primary mb-1">{{ total_employees }}</h3>
+            <p class="text-muted mb-0">Total Employees</p>
+            <small class="text-success">
+                <i class="fas fa-arrow-up me-1"></i>{{ active_employees }} active
+            </small>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-calendar-times fa-2x text-warning mb-2"></i>
-            <h3>{{ pending_leave_requests }}</h3>
-            <p class="text-muted">Pending Leaves</p>
+    <div class="col-xl-2 col-md-4 col-6 mb-4">
+        <div class="stat-card text-center h-100">
+            <div class="stat-icon bg-warning bg-opacity-10 rounded-circle mx-auto mb-3">
+                <i class="fas fa-calendar-times fa-lg text-warning"></i>
+            </div>
+            <h3 class="text-warning mb-1">{{ pending_leave_requests }}</h3>
+            <p class="text-muted mb-0">Pending Leaves</p>
+            <small class="text-muted">Requires attention</small>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-envelope fa-2x text-info mb-2"></i>
-            <h3>{{ unread_admin_messages }}</h3>
-            <p class="text-muted">Unread Messages</p>
+    <div class="col-xl-2 col-md-4 col-6 mb-4">
+        <div class="stat-card text-center h-100">
+            <div class="stat-icon bg-info bg-opacity-10 rounded-circle mx-auto mb-3">
+                <i class="fas fa-envelope fa-lg text-info"></i>
+            </div>
+            <h3 class="text-info mb-1">{{ unread_admin_messages }}</h3>
+            <p class="text-muted mb-0">Unread Messages</p>
+            <small class="text-warning">Needs response</small>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-user-check fa-2x text-success mb-2"></i>
-            <h3>{{ active_employees }}</h3>
-            <p class="text-muted">Active Employees</p>
+    <div class="col-xl-2 col-md-4 col-6 mb-4">
+        <div class="stat-card text-center h-100">
+            <div class="stat-icon bg-success bg-opacity-10 rounded-circle mx-auto mb-3">
+                <i class="fas fa-user-check fa-lg text-success"></i>
+            </div>
+            <h3 class="text-success mb-1">{{ active_employees }}</h3>
+            <p class="text-muted mb-0">Active Employees</p>
+            <small class="text-success">{{ "%.1f"|format((active_employees / total_employees * 100) if total_employees > 0 else 0) }}% active</small>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6 mb-4">
+        <div class="stat-card text-center h-100">
+            <div class="stat-icon bg-danger bg-opacity-10 rounded-circle mx-auto mb-3">
+                <i class="fas fa-tasks fa-lg text-danger"></i>
+            </div>
+            <h3 class="text-danger mb-1">{{ pending_tasks_count }}</h3>
+            <p class="text-muted mb-0">Pending Tasks</p>
+            <small class="text-muted">Assigned to team</small>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6 mb-4">
+        <div class="stat-card text-center h-100">
+            <div class="stat-icon bg-secondary bg-opacity-10 rounded-circle mx-auto mb-3">
+                <i class="fas fa-file-alt fa-lg text-secondary"></i>
+            </div>
+            <h3 class="text-secondary mb-1">{{ total_documents }}</h3>
+            <p class="text-muted mb-0">Documents</p>
+            <small class="text-muted">In system</small>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
+<div class="row mt-2">
     <!-- Pending Leave Requests -->
-    <div class="col-md-6">
-        <div class="stat-card">
-            <h4><i class="fas fa-clock text-warning"></i> Pending Leave Requests</h4>
+    <div class="col-xl-6 col-lg-12 mb-4">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-clock text-warning me-2"></i>Pending Leave Requests
+                    {% if pending_leaves %}
+                    <span class="badge bg-warning ms-2">{{ pending_leaves|length }}</span>
+                    {% endif %}
+                </h4>
+                <a href="{{ url_for('admin_leave_requests') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            
             {% if pending_leaves %}
+            <div class="leave-requests">
                 {% for leave in pending_leaves %}
-                <div class="card mb-3">
-                    <div class="card-body">
+                <div class="card mb-3 border-warning border-start-3">
+                    <div class="card-body py-3">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="card-title">{{ leave.employee.name }}</h6>
-                                <p class="card-text mb-1">
-                                    <strong>{{ leave.leave_type|title }}</strong><br>
-                                    <small class="text-muted">{{ leave.start_date }} to {{ leave.end_date }}</small>
-                                </p>
+                            <div class="flex-grow-1 me-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h6 class="card-title mb-0 me-2">{{ leave.employee.name }}</h6>
+                                    <span class="badge bg-{{ 'primary' if leave.leave_type == 'vacation' else 'info' if leave.leave_type == 'sick' else 'secondary' }}">
+                                        {{ leave.leave_type|title }}
+                                    </span>
+                                </div>
+                                
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ leave.start_date.strftime('%b %d') }} - {{ leave.end_date.strftime('%b %d, %Y') }}
+                                    </small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ (leave.end_date - leave.start_date).days + 1 }} days
+                                    </small>
+                                </div>
+                                
                                 {% if leave.reason %}
-                                <p class="card-text"><small>{{ leave.reason }}</small></p>
+                                <p class="card-text mb-2"><small>{{ leave.reason|truncate(120) }}</small></p>
                                 {% endif %}
+                                
+                                <small class="text-muted">
+                                    <i class="fas fa-paper-plane me-1"></i>
+                                    Submitted {{ leave.created_at.strftime('%b %d') }}
+                                </small>
                             </div>
-                            <div class="btn-group">
-                                <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='approved') }}" class="btn btn-success btn-sm" title="Approve">
+                            <div class="btn-group-vertical">
+                                <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='approved') }}" 
+                                   class="btn btn-success btn-sm" 
+                                   title="Approve Leave"
+                                   onclick="return confirm('Approve this leave request?')">
                                     <i class="fas fa-check"></i>
                                 </a>
-                                <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='rejected') }}" class="btn btn-danger btn-sm" title="Reject">
+                                <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='rejected') }}" 
+                                   class="btn btn-danger btn-sm" 
+                                   title="Reject Leave"
+                                   onclick="return confirm('Reject this leave request?')">
                                     <i class="fas fa-times"></i>
                                 </a>
                             </div>
@@ -76,83 +162,258 @@
                     </div>
                 </div>
                 {% endfor %}
-            {% else %}
-                <div class="text-center py-3">
-                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                    <p class="text-muted">No pending leave requests.</p>
-                </div>
-            {% endif %}
-            <div class="mt-3">
-                <a href="{{ url_for('admin_leave_requests') }}" class="btn btn-outline-primary btn-sm">View All Requests</a>
             </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5 class="text-success">All Clear!</h5>
+                <p class="text-muted">No pending leave requests.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Recent Admin Messages -->
-    <div class="col-md-6">
-        <div class="stat-card">
-            <h4><i class="fas fa-inbox text-info"></i> Recent Messages</h4>
-            {% if recent_messages %}
-                {% for message in recent_messages %}
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h6 class="card-title">{{ message.sender.name }}</h6>
-                        <p class="card-text">{{ message.subject }}</p>
-                        <p class="card-text text-muted small">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                            {% if not message.is_read %}
-                            <span class="badge bg-warning">New</span>
-                            {% endif %}
+    <!-- Recent Activity & Quick Stats -->
+    <div class="col-xl-6 col-lg-12">
+        <div class="row h-100">
+            <!-- Recent Messages -->
+            <div class="col-md-6 mb-4">
+                <div class="stat-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-inbox text-info me-2"></i>Messages
+                        </h5>
+                        <a href="{{ url_for('admin_messages') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    
+                    {% if recent_messages %}
+                    <div class="message-list">
+                        {% for message in recent_messages %}
+                        <div class="card mb-2 {% if not message.is_read %}border-info{% endif %}">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title mb-1 small">{{ message.sender.name }}</h6>
+                                        <p class="card-text small text-muted mb-1">{{ message.subject|truncate(40) }}</p>
+                                        <small class="text-muted">{{ message.created_at.strftime('%I:%M %p') }}</small>
+                                    </div>
+                                    {% if not message.is_read %}
+                                    <span class="badge bg-info">New</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-envelope-open fa-2x text-muted mb-2"></i>
+                        <p class="text-muted small">No recent messages</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="col-md-6 mb-4">
+                <div class="stat-card h-100">
+                    <h5 class="mb-3">
+                        <i class="fas fa-bolt text-warning me-2"></i>Quick Actions
+                    </h5>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin_employees_add') }}" class="btn btn-outline-primary text-start">
+                            <i class="fas fa-user-plus me-2"></i>Add Employee
+                        </a>
+                        <a href="{{ url_for('admin_send_message') }}" class="btn btn-outline-info text-start">
+                            <i class="fas fa-paper-plane me-2"></i>Send Message
+                        </a>
+                        <a href="{{ url_for('admin_todo_add') }}" class="btn btn-outline-warning text-start">
+                            <i class="fas fa-tasks me-2"></i>Assign Task
+                        </a>
+                        <a href="{{ url_for('admin_document_add') }}" class="btn btn-outline-success text-start">
+                            <i class="fas fa-file-upload me-2"></i>Upload Document
+                        </a>
+                        <a href="{{ url_for('admin_employees') }}" class="btn btn-outline-secondary text-start">
+                            <i class="fas fa-cog me-2"></i>Manage Team
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="col-12">
+                <div class="stat-card">
+                    <h5 class="mb-3">
+                        <i class="fas fa-heartbeat text-danger me-2"></i>System Status
+                    </h5>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="border-end">
+                                <h6 class="text-success mb-1">
+                                    <i class="fas fa-database me-1"></i>Database
+                                </h6>
+                                <small class="text-muted">Connected</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-end">
+                                <h6 class="text-success mb-1">
+                                    <i class="fas fa-server me-1"></i>System
+                                </h6>
+                                <small class="text-muted">Operational</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <h6 class="text-success mb-1">
+                                <i class="fas fa-shield-alt me-1"></i>Security
+                            </h6>
+                            <small class="text-muted">Active</small>
                         </div>
                     </div>
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="text-center py-3">
-                    <i class="fas fa-envelope-open fa-2x text-muted mb-2"></i>
-                    <p class="text-muted">No recent messages.</p>
-                </div>
-            {% endif %}
-            <div class="mt-3">
-                <a href="{{ url_for('admin_messages') }}" class="btn btn-outline-primary btn-sm">View All Messages</a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Quick Actions -->
+<!-- Recent Activity Timeline -->
 <div class="row mt-4">
     <div class="col-12">
         <div class="stat-card">
-            <h4>Quick Actions</h4>
-            <div class="row">
-                <div class="col-md-3 mb-3">
-                    <a href="{{ url_for('admin_employees_add') }}" class="btn btn-primary w-100">
-                        <i class="fas fa-user-plus"></i><br>
-                        Add Employee
-                    </a>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Activity
+                </h4>
+                <span class="badge bg-light text-dark">Last 24 hours</span>
+            </div>
+            <div class="activity-timeline">
+                <div class="activity-item">
+                    <div class="activity-icon bg-primary">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="activity-content">
+                        <strong>New employee registered</strong>
+                        <p class="mb-0 text-muted">John Doe joined the Engineering team</p>
+                        <small class="text-muted">2 hours ago</small>
+                    </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <a href="{{ url_for('admin_send_message') }}" class="btn btn-info w-100">
-                        <i class="fas fa-paper-plane"></i><br>
-                        Send Message
-                    </a>
+                <div class="activity-item">
+                    <div class="activity-icon bg-success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <strong>Leave request approved</strong>
+                        <p class="mb-0 text-muted">Approved vacation leave for Sarah Wilson</p>
+                        <small class="text-muted">4 hours ago</small>
+                    </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <a href="{{ url_for('admin_todo_add') }}" class="btn btn-warning w-100">
-                        <i class="fas fa-tasks"></i><br>
-                        Assign Task
-                    </a>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <a href="{{ url_for('admin_document_add') }}" class="btn btn-success w-100">
-                        <i class="fas fa-file-upload"></i><br>
-                        Upload Document
-                    </a>
+                <div class="activity-item">
+                    <div class="activity-icon bg-info">
+                        <i class="fas fa-file-upload"></i>
+                    </div>
+                    <div class="activity-content">
+                        <strong>Document uploaded</strong>
+                        <p class="mb-0 text-muted">Q3 Report uploaded to documents</p>
+                        <small class="text-muted">6 hours ago</small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.border-start-3 {
+    border-left-width: 3px !important;
+}
+
+.leave-requests {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.message-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.activity-timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.activity-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.activity-icon {
+    position: absolute;
+    left: -30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+}
+
+.activity-content {
+    padding: 10px 0;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+
+.btn-group-vertical .btn {
+    margin-bottom: 2px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh dashboard every 30 seconds
+    setInterval(function() {
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                // In a real app, you'd update specific components
+                console.log('Dashboard refreshed at', new Date().toLocaleTimeString());
+            })
+            .catch(err => console.log('Refresh failed:', err));
+    }, 30000);
+
+    // Add smooth animations
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+    });
+});
+</script>
 {% endblock %}

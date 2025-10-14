@@ -613,6 +613,31 @@ def employee_documents_upload():
 @login_required(role='employee')
 def employee_todos():
     current_user = get_current_user()
+    
+    # Get all todos for the current user
+    todos = Todo.query.filter_by(
+        employee_id=current_user.id
+    ).order_by(
+        Todo.is_completed.asc(),
+        Todo.due_date.asc(),
+        Todo.priority.desc()
+    ).all()
+    
+    # Categorize todos for better organization
+    pending_todos = [todo for todo in todos if not todo.is_completed]
+    completed_todos = [todo for todo in todos if todo.is_completed]
+    high_priority_todos = [todo for todo in pending_todos if todo.priority in ['high', 'urgent']]
+    overdue_todos = [todo for todo in pending_todos if todo.due_date and todo.due_date < date.today()]
+    
+    return render_template('employee_todos.html', 
+                         todos=todos,
+                         pending_todos=pending_todos,
+                         completed_todos=completed_todos,
+                         high_priority_todos=high_priority_todos,
+                         overdue_todos=overdue_todos,
+                         today=date.today(),
+                         current_user=current_user)
+    current_user = get_current_user()
     todos = Todo.query.filter_by(
         employee_id=current_user.id
     ).order_by(Todo.due_date.asc(), Todo.priority.desc()).all()
@@ -620,6 +645,62 @@ def employee_todos():
     return render_template('employee_todos.html', 
                          todos=todos, 
                          current_user=current_user)
+
+    @app.route('/employee/todo/<int:todo_id>/edit', methods=['GET', 'POST'])
+@login_required(role='employee')
+def employee_todo_edit(todo_id):
+    current_user = get_current_user()
+    
+    todo = Todo.query.filter_by(id=todo_id, employee_id=current_user.id).first()
+    if not todo:
+        flash('Task not found', 'error')
+        return redirect(url_for('employee_todos'))
+    
+    if request.method == 'POST':
+        try:
+            todo.content = request.form.get('content', '').strip()
+            todo.priority = request.form.get('priority', 'medium')
+            todo.category = request.form.get('category', '')
+            todo.is_important = 'is_important' in request.form
+            
+            due_date_str = request.form.get('due_date')
+            todo.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else None
+            
+            db.session.commit()
+            flash('Task updated successfully!', 'success')
+            return redirect(url_for('employee_todos'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating task', 'error')
+    
+    return render_template('employee_todo_edit.html', 
+                         todo=todo,
+                         current_user=current_user,
+                         today=date.today())
+
+@app.route('/employee/todos/clear-completed', methods=['POST'])
+@login_required(role='employee')
+def employee_todos_clear_completed():
+    current_user = get_current_user()
+    
+    try:
+        completed_todos = Todo.query.filter_by(
+            employee_id=current_user.id,
+            is_completed=True
+        ).all()
+        
+        for todo in completed_todos:
+            db.session.delete(todo)
+        
+        db.session.commit()
+        flash(f'Cleared {len(completed_todos)} completed tasks!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('Error clearing completed tasks', 'error')
+    
+    return redirect(url_for('employee_todos'))
 
 @app.route('/employee/todos/add', methods=['GET', 'POST'])
 @login_required(role='employee')
@@ -631,23 +712,33 @@ def employee_todos_add():
             content = request.form.get('content', '').strip()
             priority = request.form.get('priority', 'medium')
             due_date_str = request.form.get('due_date')
+            category = request.form.get('category', '')
+            is_important = 'is_important' in request.form
             
             if not content:
                 flash('Task description is required', 'error')
-                return render_template('employee_todos_add.html', current_user=current_user)
+                return render_template('employee_todos_add.html', 
+                                     current_user=current_user,
+                                     today=date.today(),
+                                     user_role='employee')
             
             due_date = None
             if due_date_str:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
                 if due_date < date.today():
                     flash('Due date cannot be in the past', 'error')
-                    return render_template('employee_todos_add.html', current_user=current_user)
+                    return render_template('employee_todos_add.html',
+                                         current_user=current_user,
+                                         today=date.today(),
+                                         user_role='employee')
             
             todo = Todo(
                 employee_id=current_user.id,
                 content=content,
                 priority=priority,
-                due_date=due_date
+                due_date=due_date,
+                category=category,
+                is_important=is_important
             )
             
             db.session.add(todo)
@@ -661,7 +752,10 @@ def employee_todos_add():
             db.session.rollback()
             flash('Error adding task', 'error')
     
-    return render_template('employee_todos_add.html', current_user=current_user)
+    return render_template('task_form.html',  # Updated template name
+                         current_user=current_user,
+                         today=date.today(),
+                         user_role='employee')
 
 @app.route('/employee/todo/<int:todo_id>/update', methods=['POST'])
 @login_required(role='employee')
@@ -709,6 +803,47 @@ def employee_todo_delete(todo_id):
 @app.route('/admin/dashboard')
 @login_required(role='admin')
 def admin_dashboard():
+    current_user = get_current_user()
+    
+    try:
+        total_employees = Employee.query.filter_by(is_active=True).count()
+        pending_leave_requests = LeaveRequest.query.filter_by(status='pending').count()
+        unread_admin_messages = AdminMessage.query.filter_by(is_read=False).count()
+        active_employees = Employee.query.filter_by(is_active=True).count()
+        pending_tasks_count = Todo.query.filter_by(is_completed=False).count()
+        total_documents = Document.query.count()
+        
+        pending_leaves = LeaveRequest.query.filter_by(status='pending').options(
+            db.joinedload(LeaveRequest.employee)
+        ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
+        
+        recent_messages = AdminMessage.query.options(
+            db.joinedload(AdminMessage.sender)
+        ).order_by(AdminMessage.created_at.desc()).limit(3).all()
+        
+        return render_template('admin_dashboard.html',
+                             total_employees=total_employees,
+                             pending_leave_requests=pending_leave_requests,
+                             unread_admin_messages=unread_admin_messages,
+                             active_employees=active_employees,
+                             pending_tasks_count=pending_tasks_count,
+                             total_documents=total_documents,
+                             pending_leaves=pending_leaves,
+                             recent_messages=recent_messages,
+                             current_user=current_user)
+                             
+    except Exception as e:
+        flash('Error loading admin dashboard', 'error')
+        return render_template('admin_dashboard.html',
+                             total_employees=0,
+                             pending_leave_requests=0,
+                             unread_admin_messages=0,
+                             active_employees=0,
+                             pending_tasks_count=0,
+                             total_documents=0,
+                             pending_leaves=[],
+                             recent_messages=[],
+                             current_user=current_user)
     current_user = get_current_user()
     
     try:
@@ -1152,6 +1287,76 @@ def admin_document_add():
 @app.route('/admin/todo/add', methods=['GET', 'POST'])
 @login_required(role='admin')
 def admin_todo_add():
+    current_user = get_current_user()
+    
+    if request.method == 'POST':
+        try:
+            employee_id = request.form.get('employee_id')
+            content = request.form.get('content', '').strip()
+            priority = request.form.get('priority', 'medium')
+            due_date_str = request.form.get('due_date')
+            send_notification = 'send_notification' in request.form
+            
+            if not all([employee_id, content]):
+                flash('Please fill in all required fields', 'error')
+                return render_template('task_form.html',
+                                     employees=employees,
+                                     current_user=current_user,
+                                     today=date.today(),
+                                     user_role='admin')
+            
+            due_date = None
+            if due_date_str:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                if due_date < date.today():
+                    flash('Due date cannot be in the past', 'error')
+                    return render_template('task_form.html',
+                                         employees=employees,
+                                         current_user=current_user,
+                                         today=date.today(),
+                                         user_role='admin')
+            
+            # Create admin assigned todo
+            admin_todo = AdminAssignedTodo(
+                admin_id=current_user.id,
+                employee_id=employee_id,
+                content=content,
+                priority=priority,
+                due_date=due_date
+            )
+            
+            # Also create a regular todo for the employee
+            employee_todo = Todo(
+                employee_id=employee_id,
+                content=f"[From Admin] {content}",
+                priority=priority,
+                due_date=due_date,
+                assigned_by_admin=True
+            )
+            
+            db.session.add(admin_todo)
+            db.session.add(employee_todo)
+            db.session.commit()
+            
+            if send_notification:
+                # In production, send email notification
+                pass
+            
+            flash('Task assigned successfully!', 'success')
+            return redirect(url_for('admin_dashboard'))
+            
+        except ValueError:
+            flash('Invalid date format', 'error')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error assigning task', 'error')
+    
+    employees = Employee.query.filter_by(is_active=True).order_by(Employee.name.asc()).all()
+    return render_template('task_form.html',
+                         employees=employees,
+                         current_user=current_user,
+                         today=date.today(),
+                         user_role='admin')
     current_user = get_current_user()
     
     if request.method == 'POST':

@@ -1,14 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Assign Task - Company Management System{% endblock %}
+{% block title %}
+    {% if user_role == 'admin' %}Assign Task{% else %}Add New Task{% endif %} - Company Management System
+{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="stat-card">
-            <h2 class="mb-4">Assign Task to Employee</h2>
+            <h2 class="mb-4">
+                {% if user_role == 'admin' %}
+                    <i class="fas fa-tasks me-2"></i>Assign Task to Employee
+                {% else %}
+                    <i class="fas fa-plus-circle me-2"></i>Add New Task
+                {% endif %}
+            </h2>
             
             <form method="POST">
+                {% if user_role == 'admin' %}
+                <!-- Admin-specific fields -->
                 <div class="mb-3">
                     <label for="employee_id" class="form-label">Select Employee *</label>
                     <select class="form-select" id="employee_id" name="employee_id" required>
@@ -18,10 +28,15 @@
                         {% endfor %}
                     </select>
                 </div>
+                {% else %}
+                <!-- Employee-specific fields -->
+                <input type="hidden" name="employee_id" value="{{ current_user.id }}">
+                {% endif %}
 
                 <div class="mb-3">
                     <label for="content" class="form-label">Task Description *</label>
-                    <textarea class="form-control" id="content" name="content" rows="4" required placeholder="Describe the task in detail..."></textarea>
+                    <textarea class="form-control" id="content" name="content" rows="4" required 
+                        placeholder="{% if user_role == 'admin' %}Describe the task in detail...{% else %}What do you need to accomplish?...{% endif %}"></textarea>
                 </div>
 
                 <div class="row">
@@ -31,12 +46,25 @@
                             <option value="low">Low Priority</option>
                             <option value="medium" selected>Medium Priority</option>
                             <option value="high">High Priority</option>
+                            <option value="urgent">Urgent</option>
                         </select>
                     </div>
                     
                     <div class="col-md-6 mb-3">
                         <label for="due_date" class="form-label">Due Date</label>
                         <input type="date" class="form-control" id="due_date" name="due_date" min="{{ today }}">
+                        <div class="form-text">Leave blank if no specific due date</div>
+                    </div>
+                </div>
+
+                {% if user_role == 'admin' %}
+                <!-- Admin-specific options -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="send_notification" name="send_notification" checked>
+                        <label class="form-check-label" for="send_notification">
+                            Send email notification to employee
+                        </label>
                     </div>
                 </div>
 
@@ -44,13 +72,125 @@
                     <i class="fas fa-info-circle"></i>
                     This task will appear in the employee's task list with a "[From Admin]" prefix.
                 </div>
+                {% else %}
+                <!-- Employee-specific options -->
+                <div class="mb-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select class="form-select" id="category" name="category">
+                        <option value="">No Category</option>
+                        <option value="work">Work Related</option>
+                        <option value="personal">Personal</option>
+                        <option value="meeting">Meeting Preparation</option>
+                        <option value="report">Report/Documentation</option>
+                        <option value="training">Training/Learning</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is_important" name="is_important">
+                        <label class="form-check-label" for="is_important">
+                            <i class="fas fa-star text-warning"></i> Mark as important
+                        </label>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    You can organize your tasks by priority and category. Important tasks will be highlighted.
+                </div>
+                {% endif %}
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Assign Task</button>
+                    {% if user_role == 'admin' %}
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('employee_todos') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i>Back to My Tasks
+                        </a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">
+                        {% if user_role == 'admin' %}
+                            <i class="fas fa-paper-plane me-1"></i>Assign Task
+                        {% else %}
+                            <i class="fas fa-save me-1"></i>Create Task
+                        {% endif %}
+                    </button>
                 </div>
             </form>
         </div>
+
+        {% if user_role == 'employee' %}
+        <!-- Quick task templates for employees -->
+        <div class="stat-card mt-4">
+            <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Quick Task Templates</h5>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <button type="button" class="btn btn-outline-primary w-100 text-start quick-template" data-template="Follow up on pending items">
+                        <small>📋 Follow up on pending items</small>
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button type="button" class="btn btn-outline-primary w-100 text-start quick-template" data-template="Prepare meeting agenda">
+                        <small>📅 Prepare meeting agenda</small>
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button type="button" class="btn btn-outline-primary w-100 text-start quick-template" data-template="Complete daily report">
+                        <small>📊 Complete daily report</small>
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button type="button" class="btn btn-outline-primary w-100 text-start quick-template" data-template="Review project documentation">
+                        <small>📚 Review project documentation</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Quick template functionality for employees
+    const quickTemplateButtons = document.querySelectorAll('.quick-template');
+    const contentTextarea = document.getElementById('content');
+    
+    quickTemplateButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            contentTextarea.value = this.getAttribute('data-template');
+            contentTextarea.focus();
+        });
+    });
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    const dueDateInput = document.getElementById('due_date');
+    if (dueDateInput && !dueDateInput.value) {
+        dueDateInput.min = today;
+    }
+
+    // Auto-suggest due dates for high priority tasks
+    const prioritySelect = document.getElementById('priority');
+    if (prioritySelect && dueDateInput) {
+        prioritySelect.addEventListener('change', function() {
+            if (this.value === 'high' || this.value === 'urgent') {
+                // Suggest tomorrow's date for high priority tasks
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                
+                if (!dueDateInput.value) {
+                    dueDateInput.value = tomorrowStr;
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
