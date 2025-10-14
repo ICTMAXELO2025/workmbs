@@ -1,16 +1,22 @@
 {% extends "base.html" %}
 
+{% block title %}Documents - Company Management System{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">My Documents</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('employee_documents_upload') }}" class="btn btn-primary">
-            <i class="fas fa-upload me-2"></i>Upload Document
-        </a>
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>My Documents</h2>
+            <a href="{{ url_for('employee_documents_upload') }}" class="btn btn-primary">
+                <i class="fas fa-upload"></i> Upload Document
+            </a>
+        </div>
     </div>
 </div>
 
-<div class="dashboard-widget">
+<div class="stat-card">
+    <h4>Document Library</h4>
+    
     {% if documents %}
     <div class="table-responsive">
         <table class="table table-striped">
@@ -24,19 +30,24 @@
                 </tr>
             </thead>
             <tbody>
-                {% for doc in documents %}
+                {% for document in documents %}
                 <tr>
-                    <td>{{ doc.original_filename }}</td>
-                    <td>{{ doc.description or 'No description' }}</td>
-                    <td>{{ format_file_size(doc.file_size) }}</td>
-                    <td>{{ doc.created_at.strftime('%Y-%m-%d') }}</td>
                     <td>
-                        <a href="{{ url_for('employee_document_download', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-download"></i>
-                        </a>
-                        <a href="{{ url_for('employee_document_delete', doc_id=doc.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this document?')">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                        <i class="fas fa-file-{{ 'pdf' if document.filename.endswith('.pdf') else 'word' if document.filename.endswith(('.doc', '.docx')) else 'excel' if document.filename.endswith(('.xls', '.xlsx')) else 'image' if document.filename.endswith(('.png', '.jpg', '.jpeg')) else 'text' }} text-primary me-2"></i>
+                        {{ document.original_filename }}
+                    </td>
+                    <td>{{ document.description or 'No description' }}</td>
+                    <td>{{ format_file_size(document.file_size) }}</td>
+                    <td>{{ document.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('employee_document_download', doc_id=document.id) }}" class="btn btn-outline-primary" title="Download">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <a href="{{ url_for('employee_document_delete', doc_id=document.id) }}" class="btn btn-outline-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this document?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -44,10 +55,9 @@
         </table>
     </div>
     {% else %}
-    <div class="text-center py-5">
+    <div class="text-center py-4">
         <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-        <h4>No Documents</h4>
-        <p class="text-muted">You haven't uploaded any documents yet.</p>
+        <p class="text-muted">No documents uploaded yet.</p>
         <a href="{{ url_for('employee_documents_upload') }}" class="btn btn-primary">Upload Your First Document</a>
     </div>
     {% endif %}

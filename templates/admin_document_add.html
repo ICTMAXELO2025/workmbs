@@ -1,367 +1,81 @@
 {% extends "base.html" %}
 
-{% block title %}Add Document - Admin Dashboard{% endblock %}
+{% block title %}Upload Document - Company Management System{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Add Document</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('admin_documents') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Back to Documents
-        </a>
-    </div>
-</div>
-
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-md-8">
-        <div class="dashboard-widget">
-            <h5 class="mb-4"><i class="fas fa-file-upload me-2"></i>Upload New Document</h5>
+        <div class="stat-card">
+            <h2 class="mb-4">Upload Document for Employee</h2>
             
-            <form method="POST" enctype="multipart/form-data" id="documentUploadForm">
-                <div class="form-section">
-                    <h6>Document Details</h6>
-                    
-                    <div class="mb-3">
-                        <label for="employee_id" class="form-label">Assign to Employee <span class="text-danger">*</span></label>
-                        <select class="form-select" id="employee_id" name="employee_id" required>
-                            <option value="">Select Employee</option>
-                            {% for employee in employees %}
-                            <option value="{{ employee.id }}" {% if selected_employee == employee.id %}selected{% endif %}>
-                                {{ employee.name }} ({{ employee.email }}) - {{ employee.department }}
-                            </option>
-                            {% endfor %}
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="employee_id" class="form-label">Select Employee *</label>
+                    <select class="form-select" id="employee_id" name="employee_id" required>
+                        <option value="">Choose Employee</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department or 'No department' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document" class="form-label">Select File *</label>
+                    <input type="file" class="form-control" id="document" name="document" accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx,.pptx,.ppt,.csv" required>
+                    <div class="form-text">
+                        Allowed file types: TXT, PDF, PNG, JPG, JPEG, GIF, DOC, DOCX, XLS, XLSX, PPT, PPTX, CSV
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description *</label>
+                    <textarea class="form-control" id="description" name="description" rows="3" required placeholder="Describe the purpose of this document..."></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="doc_type" class="form-label">Document Type</label>
+                        <select class="form-select" id="doc_type" name="doc_type">
+                            <option value="contract">Contract</option>
+                            <option value="policy">Policy</option>
+                            <option value="report">Report</option>
+                            <option value="form">Form</option>
+                            <option value="other" selected>Other</option>
                         </select>
-                        <div class="form-text">Select the employee who should receive this document</div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Document Description <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="description" name="description" rows="3" 
-                                  placeholder="Enter a description of this document..." required></textarea>
-                        <div class="form-text">Describe what this document is about</div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h6>File Upload</h6>
                     
-                    <div class="mb-3">
-                        <label for="document" class="form-label">Select File <span class="text-danger">*</span></label>
-                        
-                        <div class="file-upload-area" id="fileUploadArea">
-                            <div class="text-center">
-                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                <h5>Drag & Drop your file here</h5>
-                                <p class="text-muted">or click to browse</p>
-                                <small class="text-muted">Maximum file size: 16MB</small>
-                            </div>
-                            <input type="file" class="form-control d-none" id="document" name="document" 
-                                   accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xlsx,.xls,.pptx,.ppt,.csv" required>
-                        </div>
-                        
-                        <div class="file-preview mt-3" id="filePreview" style="display: none;">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-file file-icon text-primary"></i>
-                                    <div>
-                                        <div class="fw-bold" id="fileName">document.pdf</div>
-                                        <small class="text-muted" id="fileSize">0 KB</small>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-danger" id="removeFile">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="form-text">
-                            Supported formats: PDF, Word, Excel, PowerPoint, Images, Text files
-                        </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="tags" class="form-label">Tags</label>
+                        <input type="text" class="form-control" id="tags" name="tags" placeholder="e.g., important, confidential">
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <h6>Document Category</h6>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Document Type</label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="doc_type" id="type_contract" value="contract" checked>
-                                    <label class="form-check-label" for="type_contract">
-                                        <i class="fas fa-file-contract me-1 text-primary"></i>Contract
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="doc_type" id="type_policy" value="policy">
-                                    <label class="form-check-label" for="type_policy">
-                                        <i class="fas fa-book me-1 text-info"></i>Policy
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="doc_type" id="type_hr" value="hr">
-                                    <label class="form-check-label" for="type_hr">
-                                        <i class="fas fa-users me-1 text-success"></i>HR Document
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="doc_type" id="type_payslip" value="payslip">
-                                    <label class="form-check-label" for="type_payslip">
-                                        <i class="fas fa-money-bill me-1 text-warning"></i>Payslip
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="doc_type" id="type_training" value="training">
-                                    <label class="form-check-label" for="type_training">
-                                        <i class="fas fa-graduation-cap me-1 text-danger"></i>Training Material
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="doc_type" id="type_other" value="other">
-                                    <label class="form-check-label" for="type_other">
-                                        <i class="fas fa-file me-1 text-secondary"></i>Other
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is_important" name="is_important">
+                        <label class="form-check-label" for="is_important">
+                            Mark as Important
+                        </label>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="tags" class="form-label">Tags (Optional)</label>
-                        <input type="text" class="form-control" id="tags" name="tags" 
-                               placeholder="e.g., important, confidential, 2024">
-                        <div class="form-text">Add tags to help organize documents (comma separated)</div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="send_notification" name="send_notification" checked>
+                        <label class="form-check-label" for="send_notification">
+                            Send notification to employee
+                        </label>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <h6>Notification Settings</h6>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="send_notification" name="send_notification" checked>
-                            <label class="form-check-label" for="send_notification">
-                                Send notification email to employee
-                            </label>
-                        </div>
-                        <div class="form-text">Employee will receive an email when this document is uploaded</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_important" name="is_important">
-                            <label class="form-check-label" for="is_important">
-                                Mark as important document
-                            </label>
-                        </div>
-                        <div class="form-text">Important documents will be highlighted for the employee</div>
-                    </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Note:</strong> The selected employee will be able to view and download this document from their documents section.
                 </div>
 
-                <div class="mt-4">
-                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                        <i class="fas fa-upload me-2"></i>Upload Document
-                    </button>
-                    <a href="{{ url_for('admin_documents') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('admin_documents') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Upload Document</button>
                 </div>
             </form>
         </div>
     </div>
-
-    <div class="col-md-4">
-        <div class="dashboard-widget">
-            <h6><i class="fas fa-info-circle me-2 text-info"></i>Upload Guidelines</h6>
-            
-            <div class="alert alert-info">
-                <h6>File Requirements:</h6>
-                <ul class="mb-0 small">
-                    <li>Maximum file size: 16MB</li>
-                    <li>Supported formats: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, JPG, PNG, TXT</li>
-                    <li>Use descriptive file names</li>
-                </ul>
-            </div>
-
-            <div class="alert alert-warning">
-                <h6>Privacy & Security:</h6>
-                <ul class="mb-0 small">
-                    <li>Only upload work-related documents</li>
-                    <li>Ensure documents don't contain sensitive personal information</li>
-                    <li>Use appropriate document categories</li>
-                </ul>
-            </div>
-
-            <div class="document-types">
-                <h6>Document Types:</h6>
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="badge bg-primary">Contracts</span>
-                    <span class="badge bg-info">Policies</span>
-                    <span class="badge bg-success">HR Docs</span>
-                    <span class="badge bg-warning">Payslips</span>
-                    <span class="badge bg-danger">Training</span>
-                    <span class="badge bg-secondary">Other</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="dashboard-widget mt-4">
-            <h6><i class="fas fa-history me-2 text-success"></i>Recent Uploads</h6>
-            {% if recent_documents %}
-            <div class="list-group list-group-flush">
-                {% for doc in recent_documents %}
-                <div class="list-group-item px-0">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1 small">{{ doc.original_filename|truncate(20) }}</h6>
-                        <small>{{ doc.created_at.strftime('%m/%d') }}</small>
-                    </div>
-                    <p class="mb-1 small text-muted">{{ doc.employee.name }}</p>
-                    <small class="text-muted">{{ doc.description|truncate(30) }}</small>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-muted small">No recent document uploads</p>
-            {% endif %}
-        </div>
-    </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const fileUploadArea = document.getElementById('fileUploadArea');
-    const fileInput = document.getElementById('document');
-    const filePreview = document.getElementById('filePreview');
-    const fileName = document.getElementById('fileName');
-    const fileSize = document.getElementById('fileSize');
-    const removeFileBtn = document.getElementById('removeFile');
-    const submitBtn = document.getElementById('submitBtn');
-    const form = document.getElementById('documentUploadForm');
-
-    // File upload area click handler
-    fileUploadArea.addEventListener('click', function() {
-        fileInput.click();
-    });
-
-    // Drag and drop functionality
-    fileUploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        fileUploadArea.classList.add('dragover');
-    });
-
-    fileUploadArea.addEventListener('dragleave', function() {
-        fileUploadArea.classList.remove('dragover');
-    });
-
-    fileUploadArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        fileUploadArea.classList.remove('dragover');
-        
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            handleFileSelection(e.dataTransfer.files[0]);
-        }
-    });
-
-    // File input change handler
-    fileInput.addEventListener('change', function(e) {
-        if (this.files.length) {
-            handleFileSelection(this.files[0]);
-        }
-    });
-
-    // Remove file handler
-    removeFileBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        fileInput.value = '';
-        filePreview.style.display = 'none';
-        fileUploadArea.style.display = 'block';
-    });
-
-    // Handle file selection
-    function handleFileSelection(file) {
-        if (file) {
-            // Validate file size (16MB max)
-            const maxSize = 16 * 1024 * 1024;
-            if (file.size > maxSize) {
-                showToast('File size must be less than 16MB', 'error');
-                return;
-            }
-
-            // Validate file type
-            const allowedTypes = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'xlsx', 'xls', 'pptx', 'ppt', 'csv'];
-            const fileExtension = file.name.split('.').pop().toLowerCase();
-            
-            if (!allowedTypes.includes(fileExtension)) {
-                showToast('File type not allowed. Please check supported formats.', 'error');
-                return;
-            }
-
-            // Update preview
-            fileName.textContent = file.name;
-            fileSize.textContent = formatFileSize(file.size);
-            filePreview.style.display = 'block';
-            fileUploadArea.style.display = 'none';
-
-            showToast(`File "${file.name}" selected successfully`, 'success');
-        }
-    }
-
-    // Form submission handler
-    form.addEventListener('submit', function(e) {
-        const employeeId = document.getElementById('employee_id').value;
-        const description = document.getElementById('description').value;
-        const file = fileInput.files[0];
-
-        if (!employeeId || !description || !file) {
-            e.preventDefault();
-            showToast('Please fill in all required fields and select a file', 'error');
-            return;
-        }
-
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
-    });
-
-    // File size formatter
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    // Toast notification function
-    function showToast(message, type = 'info') {
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type} alert-dismissible fade show toast-message`;
-        toast.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-        `;
-        
-        document.body.appendChild(toast);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 5000);
-    }
-});
-</script>
 {% endblock %}

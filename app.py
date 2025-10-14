@@ -5,6 +5,10 @@ from datetime import datetime, date
 import os
 import re
 from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
+import os
+
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 
 # Initialize Flask app first
 app = Flask(__name__)

@@ -1,55 +1,56 @@
 {% extends "base.html" %}
 
+{% block title %}Assign Task - Company Management System{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Create Todo</h1>
-    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-    </a>
-</div>
-
-<div class="dashboard-widget">
-    <form method="POST">
-        <div class="mb-3">
-            <label for="employee_id" class="form-label">Assign To</label>
-            <select class="form-select" id="employee_id" name="employee_id" required>
-                <option value="">Select Employee</option>
-                {% for employee in employees %}
-                <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department }})</option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div class="mb-3">
-            <label for="content" class="form-label">Task Description</label>
-            <textarea class="form-control" id="content" name="content" rows="4" required placeholder="Enter task description..."></textarea>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6">
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="stat-card">
+            <h2 class="mb-4">Assign Task to Employee</h2>
+            
+            <form method="POST">
                 <div class="mb-3">
-                    <label for="priority" class="form-label">Priority</label>
-                    <select class="form-select" id="priority" name="priority" required>
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
+                    <label for="employee_id" class="form-label">Select Employee *</label>
+                    <select class="form-select" id="employee_id" name="employee_id" required>
+                        <option value="">Choose Employee</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department or 'No department' }})</option>
+                        {% endfor %}
                     </select>
                 </div>
-            </div>
-            <div class="col-md-6">
+
                 <div class="mb-3">
-                    <label for="due_date" class="form-label">Due Date (Optional)</label>
-                    <input type="date" class="form-control" id="due_date" name="due_date" min="{{ today }}">
+                    <label for="content" class="form-label">Task Description *</label>
+                    <textarea class="form-control" id="content" name="content" rows="4" required placeholder="Describe the task in detail..."></textarea>
                 </div>
-            </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority">
+                            <option value="low">Low Priority</option>
+                            <option value="medium" selected>Medium Priority</option>
+                            <option value="high">High Priority</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="due_date" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="due_date" name="due_date" min="{{ today }}">
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    This task will appear in the employee's task list with a "[From Admin]" prefix.
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Assign Task</button>
+                </div>
+            </form>
         </div>
-        
-        <div class="mt-4">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>Create Todo
-            </button>
-            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}

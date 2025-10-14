@@ -1,34 +1,38 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Upload Document</h1>
-    <a href="{{ url_for('employee_documents') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left me-2"></i>Back to Documents
-    </a>
-</div>
+{% block title %}Upload Document - Company Management System{% endblock %}
 
-<div class="dashboard-widget">
-    <form method="POST" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label for="file" class="form-label">Select File</label>
-            <input type="file" class="form-control" id="file" name="file" required accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xlsx,.xls,.pptx,.ppt,.csv">
-            <div class="form-text">
-                Allowed file types: PDF, Word, Excel, PowerPoint, Images, Text, CSV (Max 16MB)
-            </div>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="stat-card">
+            <h2 class="mb-4">Upload Document</h2>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="file" class="form-label">Select File *</label>
+                    <input type="file" class="form-control" id="file" name="file" accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx,.pptx,.ppt,.csv" required>
+                    <div class="form-text">
+                        Allowed file types: TXT, PDF, PNG, JPG, JPEG, GIF, DOC, DOCX, XLS, XLSX, PPT, PPTX, CSV
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of the document..."></textarea>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Note:</strong> Maximum file size is 10MB. Files are stored securely and can be accessed anytime.
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('employee_documents') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Upload Document</button>
+                </div>
+            </form>
         </div>
-        
-        <div class="mb-3">
-            <label for="description" class="form-label">Description (Optional)</label>
-            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of the document"></textarea>
-        </div>
-        
-        <div class="mt-4">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-upload me-2"></i>Upload Document
-            </button>
-            <a href="{{ url_for('employee_documents') }}" class="btn btn-outline-secondary">Cancel</a>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}

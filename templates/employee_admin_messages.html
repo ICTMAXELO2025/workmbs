@@ -1,370 +1,56 @@
 {% extends "base.html" %}
 
+{% block title %}Contact Admin - Company Management System{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Messages to Admin</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-primary">
-            <i class="fas fa-paper-plane me-2"></i>Contact Admin
-        </a>
-    </div>
-</div>
-
-<!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card stat-card text-primary">
-            <div class="card-body text-center">
-                <div class="number">{{ messages|length }}</div>
-                <div class="label">Total Messages</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card text-warning">
-            <div class="card-body text-center">
-                <div class="number">{{ messages|selectattr('is_read', 'false')|list|length }}</div>
-                <div class="label">Unread by Admin</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card text-info">
-            <div class="card-body text-center">
-                <div class="number">{{ messages|selectattr('admin_response')|list|length }}</div>
-                <div class="label">With Responses</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card text-success">
-            <div class="card-body text-center">
-                <div class="number">{{ messages|selectattr('attached_documents')|list|length }}</div>
-                <div class="label">With Attachments</div>
-            </div>
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Contact Administration</h2>
+            <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> New Message
+            </a>
         </div>
     </div>
 </div>
 
-<div class="dashboard-widget">
+<div class="stat-card">
+    <h4>My Messages to Admin</h4>
+    
     {% if messages %}
-    <div class="list-group message-thread">
+    <div class="row">
         {% for message in messages %}
-        <div class="list-group-item list-group-item-action message-item {% if not message.is_read %}unread{% endif %}" 
-             data-message-id="{{ message.id }}">
-            <div class="d-flex w-100 justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h5 class="mb-1">
-                        {{ message.subject }}
-                        {% if message.attached_documents %}
-                        <i class="fas fa-paperclip ms-2 text-muted" title="Has attachments"></i>
-                        {% endif %}
-                    </h5>
-                    <small class="text-muted">Sent: {{ message.created_at.strftime('%b %d, %Y at %H:%M') }}</small>
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>{{ message.subject }}</strong>
+                    <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                 </div>
-                <div class="message-status">
-                    {% if not message.is_read %}
-                    <span class="badge bg-warning">Unread</span>
+                <div class="card-body">
+                    <p class="card-text">{{ message.content }}</p>
+                    
+                    {% if message.admin_response %}
+                    <div class="alert alert-success mt-3">
+                        <strong>Admin Response:</strong>
+                        <p class="mb-0">{{ message.admin_response }}</p>
+                        <small class="text-muted">Responded on: {{ message.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
                     {% else %}
-                    <span class="badge bg-success">Read</span>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-clock"></i> Waiting for admin response
+                    </div>
                     {% endif %}
-                </div>
-            </div>
-
-            <div class="message-content mt-3">
-                <p class="mb-3">{{ message.content }}</p>
-            </div>
-
-            <!-- Display Attached Documents -->
-            {% if message.attached_documents %}
-            <div class="attachments-section mt-3">
-                <strong class="text-muted small">Attachments:</strong>
-                <div class="mt-2">
-                    {% for document in message.attached_documents %}
-                    <div class="attachment-item">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-paperclip attachment-icon"></i>
-                                <div>
-                                    <div class="fw-bold small">{{ document.original_filename }}</div>
-                                    <small class="text-muted">{{ format_file_size(document.file_size) }}</small>
-                                </div>
-                            </div>
-                            <a href="{{ url_for('download_admin_message_attachment', document_id=document.id) }}" 
-                               class="btn btn-outline-primary btn-sm document-download-btn"
-                               data-document-id="{{ document.id }}"
-                               data-filename="{{ document.original_filename }}">
-                                <i class="fas fa-download me-1"></i>Download
-                            </a>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-            
-            <!-- Admin Response Section -->
-            {% if message.admin_response %}
-            <div class="admin-response mt-4 p-3 rounded">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <strong class="text-success">
-                        <i class="fas fa-reply me-1"></i>Admin Response
-                    </strong>
-                    <small class="text-muted">Responded: {{ message.updated_at.strftime('%b %d, %Y at %H:%M') }}</small>
-                </div>
-                <p class="mb-0 mt-2">{{ message.admin_response }}</p>
-            </div>
-            {% else %}
-            <div class="waiting-response mt-3 p-2 bg-light rounded">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-clock text-warning me-2"></i>
-                    <small class="text-warning">Waiting for admin response</small>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Message Actions -->
-            <div class="message-actions mt-3 pt-2 border-top">
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">Message ID: {{ message.id }}</small>
-                    <div>
-                        {% if not message.is_read %}
-                        <span class="badge bg-warning">
-                            <i class="fas fa-eye-slash me-1"></i>Unread by Admin
-                        </span>
-                        {% else %}
-                        <span class="badge bg-success">
-                            <i class="fas fa-eye me-1"></i>Read on {{ message.updated_at.strftime('%b %d') }}
-                        </span>
-                        {% endif %}
-                    </div>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-
-    <!-- Pagination or Load More -->
-    <div class="mt-4 d-flex justify-content-between align-items-center">
-        <small class="text-muted">Showing {{ messages|length }} messages</small>
-        <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-outline-primary btn-sm">
-            <i class="fas fa-plus me-1"></i>New Message
-        </a>
-    </div>
     {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-headset fa-3x text-muted mb-3"></i>
-        <h4>No Messages to Admin</h4>
-        <p class="text-muted">You haven't sent any messages to the admin yet.</p>
-        <div class="mt-4">
-            <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-primary me-2">
-                <i class="fas fa-paper-plane me-1"></i>Send Your First Message
-            </a>
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#helpModal">
-                <i class="fas fa-question-circle me-1"></i>Get Help
-            </button>
-        </div>
+    <div class="text-center py-4">
+        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+        <p class="text-muted">You haven't sent any messages to admin yet.</p>
+        <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-primary">Send Your First Message</a>
     </div>
     {% endif %}
 </div>
-
-<!-- Help Modal -->
-<div class="modal fade" id="helpModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-question-circle me-2"></i>Contacting Admin</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6>When to contact admin:</h6>
-                <ul class="mb-3">
-                    <li>Technical issues with the system</li>
-                    <li>HR-related inquiries</li>
-                    <li>Leave request clarifications</li>
-                    <li>System access problems</li>
-                    <li>Other administrative matters</li>
-                </ul>
-                
-                <h6>What to include:</h6>
-                <ul class="mb-3">
-                    <li>Clear subject line</li>
-                    <li>Detailed description of your issue</li>
-                    <li>Relevant documents (if any)</li>
-                    <li>Your contact information</li>
-                </ul>
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Response Time:</strong> Admin typically responds within 24-48 hours during business days.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a href="{{ url_for('employee_admin_messages_send') }}" class="btn btn-primary">Compose Message</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Quick Tips -->
-<div class="row mt-4">
-    <div class="col-md-6">
-        <div class="dashboard-widget">
-            <h6><i class="fas fa-lightbulb me-2 text-warning"></i>Quick Tips</h6>
-            <div class="list-group list-group-flush small">
-                <div class="list-group-item px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>
-                    Use clear and descriptive subject lines
-                </div>
-                <div class="list-group-item px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>
-                    Attach relevant documents when needed
-                </div>
-                <div class="list-group-item px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>
-                    Check for admin responses regularly
-                </div>
-                <div class="list-group-item px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>
-                    One issue per message for better tracking
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="dashboard-widget">
-            <h6><i class="fas fa-history me-2 text-info"></i>Recent Activity</h6>
-            {% if messages %}
-            <div class="list-group list-group-flush small">
-                {% for message in messages[:3] %}
-                <div class="list-group-item px-0">
-                    <div class="d-flex justify-content-between">
-                        <span>{{ message.subject|truncate(25) }}</span>
-                        <small class="text-muted">{{ message.created_at.strftime('%m/%d') }}</small>
-                    </div>
-                    <small class="text-muted">
-                        {% if message.admin_response %}
-                        <i class="fas fa-reply text-success me-1"></i>Replied
-                        {% else %}
-                        <i class="fas fa-clock text-warning me-1"></i>Pending
-                        {% endif %}
-                    </small>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-muted small mb-0">No recent message activity</p>
-            {% endif %}
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize message interactions
-    initMessageInteractions();
-    
-    // Initialize document download tracking
-    initDocumentManagement();
-    
-    // Add click handlers for message items
-    document.querySelectorAll('.message-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            // Don't trigger if clicking on links or buttons
-            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('a') || e.target.closest('button')) {
-                return;
-            }
-            
-            // Toggle message expansion
-            this.classList.toggle('expanded');
-        });
-    });
-
-    // Help modal trigger
-    const helpButton = document.querySelector('[data-bs-target="#helpModal"]');
-    if (helpButton) {
-        helpButton.addEventListener('click', function() {
-            // You could track help modal opens here
-            console.log('Help modal opened');
-        });
-    }
-
-    // Auto-refresh messages every 2 minutes if there are pending responses
-    const pendingMessages = document.querySelectorAll('.waiting-response');
-    if (pendingMessages.length > 0) {
-        setInterval(() => {
-            // Check for new responses (you could implement AJAX refresh here)
-            console.log('Checking for admin responses...');
-        }, 120000); // 2 minutes
-    }
-});
-</script>
-
-<style>
-.message-item {
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.message-item:hover {
-    background-color: #f8f9fa !important;
-    transform: translateX(2px);
-}
-
-.message-item.expanded {
-    background-color: #f0f8ff !important;
-}
-
-.message-item.unread {
-    border-left: 4px solid #ffc107;
-}
-
-.message-status .badge {
-    font-size: 0.7rem;
-}
-
-.attachments-section {
-    border-left: 3px solid #17a2b8;
-    padding-left: 15px;
-}
-
-.admin-response {
-    background: linear-gradient(135deg, #f0fff4, #e8f5e8);
-    border-left: 4px solid #28a745;
-}
-
-.waiting-response {
-    border-left: 3px solid #ffc107;
-}
-
-.attachment-item {
-    background: #f8f9fa;
-    border-radius: 6px;
-    padding: 10px;
-    margin-bottom: 8px;
-    transition: all 0.3s ease;
-}
-
-.attachment-item:hover {
-    background: #e9ecef;
-    transform: translateX(5px);
-}
-
-.message-content {
-    line-height: 1.6;
-}
-
-@media (max-width: 768px) {
-    .message-item {
-        padding: 15px 10px;
-    }
-    
-    .message-status .badge {
-        font-size: 0.6rem;
-    }
-}
-</style>
 {% endblock %}
