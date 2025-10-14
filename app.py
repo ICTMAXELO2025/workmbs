@@ -6,6 +6,8 @@ from datetime import datetime, date, timedelta
 import os
 import secrets
 import pytz
+from functools import wraps 
+from models import db, Employee, Admin, LeaveRequest, Message, Todo, Document, AdminMessage, Announcement, MessageDocument, AdminMessageDocument, AdminAssignedTodo
 
 # Initialize Flask app first
 app = Flask(__name__)
@@ -18,12 +20,14 @@ def get_database_uri():
     database_url = os.environ.get('DATABASE_URL')
     
     if database_url:
+        print("Using DATABASE_URL from environment variables")
         # Handle PostgreSQL URL format (especially for Render)
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
         return database_url
     
-    # Fallback to local PostgreSQL for development
+    # Fallback for development
+    print("Using development database URL")
     return 'postgresql://postgres:Maxelo%402023@localhost:5432/managament_db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
@@ -95,6 +99,7 @@ initialize_database()
 def login_required(role=None):
     """Decorator to require login and optionally specific role"""
     def decorator(f):
+        @wraps(f)  # This is crucial to preserve the original function name
         def decorated_function(*args, **kwargs):
             if 'user_id' not in session:
                 flash('Please log in to access this page.', 'error')
