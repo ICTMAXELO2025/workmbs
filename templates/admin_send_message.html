@@ -1,87 +1,153 @@
 {% extends "base.html" %}
 
-{% block title %}Send Message - Company Management System{% endblock %}
+{% block title %}Send Message - Admin Dashboard{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="stat-card">
-            <h2 class="mb-4">Send Message to Employees</h2>
-            
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Recipient Type</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="recipient_type" id="all_employees" value="all" checked>
-                        <label class="form-check-label" for="all_employees">
-                            All Active Employees
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="recipient_type" id="selected_employees" value="selected">
-                        <label class="form-check-label" for="selected_employees">
-                            Selected Employees
-                        </label>
-                    </div>
-                </div>
-
-                <div class="mb-3" id="employeeSelection" style="display: none;">
-                    <label class="form-label">Select Employees</label>
-                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 10px;">
-                        {% for employee in employees %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="selected_employees" value="{{ employee.id }}" id="emp_{{ employee.id }}">
-                            <label class="form-check-label" for="emp_{{ employee.id }}">
-                                {{ employee.name }} ({{ employee.department or 'No department' }})
-                            </label>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="subject" class="form-label">Subject *</label>
-                    <input type="text" class="form-control" id="subject" name="subject" required>
-                </div>
-
-                <div class="mb-3">
-                    <label for="content" class="form-label">Message *</label>
-                    <textarea class="form-control" id="content" name="content" rows="6" required placeholder="Type your message here..."></textarea>
-                </div>
-
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    This message will be sent to the selected employees and will appear in their message inbox.
-                </div>
-
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
-                </div>
-            </form>
-        </div>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Send Message to Employees</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_messages') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Messages
+        </a>
     </div>
 </div>
 
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-bullhorn me-2"></i>Compose Message</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_send_message') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Recipients *</label>
+                        <div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipient_type" 
+                                       id="all_employees" value="all" checked>
+                                <label class="form-check-label" for="all_employees">
+                                    All Active Employees ({{ employees|length }})
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipient_type" 
+                                       id="specific_employees" value="specific">
+                                <label class="form-check-label" for="specific_employees">
+                                    Specific Employees
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="specific_employees_select" style="display: none;">
+                        <label class="form-label">Select Employees</label>
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 0.375rem;">
+                            {% for employee in employees %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="selected_employees" 
+                                       value="{{ employee.id }}" id="emp_{{ employee.id }}">
+                                <label class="form-check-label" for="emp_{{ employee.id }}">
+                                    {{ employee.name }} ({{ employee.department }})
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject *</label>
+                        <input type="text" class="form-control" id="subject" name="subject" 
+                               placeholder="Enter message subject" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Message Content *</label>
+                        <textarea class="form-control" id="content" name="content" rows="8" 
+                                  placeholder="Type your message here..." required></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This message will be sent to the selected employees and will appear in their message inbox.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_messages') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Templates -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="fas fa-sticky-note me-2"></i>Message Templates</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong>Announcements</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>Company updates</li>
+                            <li>Policy changes</li>
+                            <li>Event notifications</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Reminders</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>Deadline reminders</li>
+                            <li>Meeting schedules</li>
+                            <li>Training sessions</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Updates</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>System maintenance</li>
+                            <li>New features</li>
+                            <li>Procedure changes</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>General</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>Welcome messages</li>
+                            <li>Birthday wishes</li>
+                            <li>Recognition notes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const allRadio = document.getElementById('all_employees');
-        const selectedRadio = document.getElementById('selected_employees');
-        const employeeSelection = document.getElementById('employeeSelection');
-
-        function toggleEmployeeSelection() {
-            if (selectedRadio.checked) {
-                employeeSelection.style.display = 'block';
-            } else {
-                employeeSelection.style.display = 'none';
-            }
+document.addEventListener('DOMContentLoaded', function() {
+    const allEmployeesRadio = document.getElementById('all_employees');
+    const specificEmployeesRadio = document.getElementById('specific_employees');
+    const specificEmployeesSelect = document.getElementById('specific_employees_select');
+    
+    function toggleEmployeeSelection() {
+        if (specificEmployeesRadio.checked) {
+            specificEmployeesSelect.style.display = 'block';
+        } else {
+            specificEmployeesSelect.style.display = 'none';
         }
-
-        allRadio.addEventListener('change', toggleEmployeeSelection);
-        selectedRadio.addEventListener('change', toggleEmployeeSelection);
-        
-        // Initialize
-        toggleEmployeeSelection();
-    });
+    }
+    
+    allEmployeesRadio.addEventListener('change', toggleEmployeeSelection);
+    specificEmployeesRadio.addEventListener('change', toggleEmployeeSelection);
+    
+    // Initialize
+    toggleEmployeeSelection();
+});
 </script>
 {% endblock %}

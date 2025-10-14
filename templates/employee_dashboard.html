@@ -1,148 +1,247 @@
 {% extends "base.html" %}
 
-{% block title %}Employee Dashboard - Company Management System{% endblock %}
+{% block title %}Employee Dashboard - Maxelo Management{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Employee Dashboard</h2>
-            <span class="badge bg-primary">Welcome, {{ current_user.name }}</span>
-        </div>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Employee Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="me-2"><i class="fas fa-clock"></i> {{ today.strftime('%Y-%m-%d %H:%M') }} SAST</span>
     </div>
 </div>
 
 <!-- Statistics Cards -->
-<div class="row">
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-calendar-times fa-2x text-warning mb-2"></i>
-            <h3>{{ pending_leaves }}</h3>
-            <p class="text-muted">Pending Leaves</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-envelope fa-2x text-info mb-2"></i>
-            <h3>{{ unread_messages }}</h3>
-            <p class="text-muted">Unread Messages</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-tasks fa-2x text-danger mb-2"></i>
-            <h3>{{ pending_todos }}</h3>
-            <p class="text-muted">Pending Tasks</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
-            <h3>{{ approved_leaves }}</h3>
-            <p class="text-muted">Approved Leaves</p>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-4">
-    <!-- Recent Leave Requests -->
-    <div class="col-md-6">
-        <div class="stat-card">
-            <h4><i class="fas fa-history"></i> Recent Leave Requests</h4>
-            {% if recent_leaves %}
-                {% for leave in recent_leaves %}
-                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                    <div>
-                        <strong>{{ leave.leave_type|title }}</strong>
-                        <br>
-                        <small class="text-muted">{{ leave.start_date }} to {{ leave.end_date }}</small>
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Pending Leave Requests
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_leaves }}</div>
                     </div>
-                    <span class="badge bg-{{ 'success' if leave.status == 'approved' else 'warning' if leave.status == 'pending' else 'danger' }}">
-                        {{ leave.status|title }}
-                    </span>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar-times fa-2x text-gray-300"></i>
+                    </div>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No leave requests yet.</p>
-            {% endif %}
-            <div class="mt-3">
-                <a href="{{ url_for('employee_leave_request') }}" class="btn btn-primary btn-sm">Request Leave</a>
-                <a href="{{ url_for('employee_leave') }}" class="btn btn-outline-primary btn-sm">View All</a>
             </div>
         </div>
     </div>
 
-    <!-- Upcoming Tasks -->
-    <div class="col-md-6">
-        <div class="stat-card">
-            <h4><i class="fas fa-tasks"></i> Upcoming Tasks</h4>
-            {% if upcoming_todos %}
-                {% for todo in upcoming_todos %}
-                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                    <div>
-                        <strong>{{ todo.content }}</strong>
-                        {% if todo.due_date %}
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Unread Messages
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ unread_messages }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-envelope fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Pending Tasks
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_todos }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-tasks fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            My Documents
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ recent_documents|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-file fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('employee_leave_request') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>Request Leave
+                    </a>
+                    <a href="{{ url_for('employee_messages_send') }}" class="btn btn-outline-success">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
+                    </a>
+                    <a href="{{ url_for('employee_todos_add') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-plus me-2"></i>Add Task
+                    </a>
+                    <a href="{{ url_for('employee_documents_upload') }}" class="btn btn-outline-info">
+                        <i class="fas fa-upload me-2"></i>Upload Document
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="fas fa-bell me-2"></i>Recent Notifications</h6>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                    {% for notification in notifications %}
+                    <div class="alert alert-{{ 'info' if notification.type == 'message' else 'success' if notification.type == 'leave' else 'warning' }} alert-dismissible fade show py-2" role="alert">
+                        <small>{{ notification.content }}</small>
                         <br>
-                        <small class="text-muted">Due: {{ todo.due_date }}</small>
+                        <small class="text-muted">{{ notification.time.strftime('%H:%M') }}</small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">No new notifications</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="col-lg-8">
+        <div class="row">
+            <!-- Recent Leave Requests -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0"><i class="fas fa-calendar me-2"></i>Recent Leave Requests</h6>
+                        <a href="{{ url_for('employee_leave') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_leaves %}
+                            {% for leave in recent_leaves %}
+                            <div class="border-bottom pb-2 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ leave.leave_type|title }}</strong>
+                                    <span class="badge bg-{{ 'success' if leave.status == 'approved' else 'warning' if leave.status == 'pending' else 'danger' }}">
+                                        {{ leave.status|title }}
+                                    </span>
+                                </div>
+                                <small class="text-muted">
+                                    {{ leave.start_date.strftime('%d %b') }} - {{ leave.end_date.strftime('%d %b %Y') }}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No leave requests</p>
                         {% endif %}
                     </div>
-                    <span class="badge bg-{{ 'danger' if todo.priority == 'high' else 'warning' if todo.priority == 'medium' else 'info' }}">
-                        {{ todo.priority|title }}
-                    </span>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No upcoming tasks.</p>
-            {% endif %}
-            <div class="mt-3">
-                <a href="{{ url_for('employee_todos_add') }}" class="btn btn-primary btn-sm">Add Task</a>
-                <a href="{{ url_for('employee_todos') }}" class="btn btn-outline-primary btn-sm">View All</a>
             </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mt-4">
-    <!-- Recent Messages -->
-    <div class="col-md-6">
-        <div class="stat-card">
-            <h4><i class="fas fa-envelope"></i> Recent Messages</h4>
-            {% if recent_messages %}
-                {% for message in recent_messages %}
-                <div class="border-bottom py-2">
-                    <strong>{{ message.subject }}</strong>
-                    <p class="mb-1 text-muted small">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
-                    <small class="text-muted">Received: {{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                    {% if not message.is_read %}
-                    <span class="badge bg-danger float-end">New</span>
-                    {% endif %}
+            <!-- Upcoming Tasks -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0"><i class="fas fa-tasks me-2"></i>Upcoming Tasks</h6>
+                        <a href="{{ url_for('employee_todos') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        {% if upcoming_todos %}
+                            {% for todo in upcoming_todos %}
+                            <div class="border-bottom pb-2 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" {{ 'checked' if todo.is_completed else '' }} disabled>
+                                    <label class="form-check-label">
+                                        {{ todo.content[:50] }}{% if todo.content|length > 50 %}...{% endif %}
+                                    </label>
+                                </div>
+                                {% if todo.due_date %}
+                                <small class="text-{{ 'danger' if todo.due_date < today else 'warning' if todo.due_date == today else 'muted' }}">
+                                    Due: {{ todo.due_date.strftime('%d %b %Y') }}
+                                </small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No upcoming tasks</p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No messages yet.</p>
-            {% endif %}
-            <div class="mt-3">
-                <a href="{{ url_for('employee_messages_send') }}" class="btn btn-primary btn-sm">Send Message</a>
-                <a href="{{ url_for('employee_messages') }}" class="btn btn-outline-primary btn-sm">View All</a>
             </div>
-        </div>
-    </div>
 
-    <!-- Announcements -->
-    <div class="col-md-6">
-        <div class="stat-card">
-            <h4><i class="fas fa-bullhorn"></i> Announcements</h4>
-            {% if announcements %}
-                {% for announcement in announcements %}
-                <div class="border-bottom py-2">
-                    <strong>{{ announcement.title }}</strong>
-                    <p class="mb-1 text-muted">{{ announcement.content[:100] }}{% if announcement.content|length > 100 %}...{% endif %}</p>
-                    <small class="text-muted">Posted: {{ announcement.created_at.strftime('%Y-%m-%d') }}</small>
+            <!-- Recent Messages -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0"><i class="fas fa-envelope me-2"></i>Recent Messages</h6>
+                        <a href="{{ url_for('employee_messages') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_messages %}
+                            {% for message in recent_messages %}
+                            <div class="border-bottom pb-2 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ message.subject[:30] }}{% if message.subject|length > 30 %}...{% endif %}</strong>
+                                    {% if not message.is_read %}<span class="badge bg-danger">New</span>{% endif %}
+                                </div>
+                                <small class="text-muted">
+                                    From: {{ message.sender.name }} • {{ message.created_at.strftime('%d %b %H:%M') }}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No messages</p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No announcements at this time.</p>
-            {% endif %}
+            </div>
+
+            <!-- Announcements -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0"><i class="fas fa-bullhorn me-2"></i>Announcements</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if announcements %}
+                            {% for announcement in announcements %}
+                            <div class="border-bottom pb-2 mb-2">
+                                <strong>{{ announcement.title }}</strong>
+                                <p class="mb-1 small">{{ announcement.content[:100] }}{% if announcement.content|length > 100 %}...{% endif %}</p>
+                                <small class="text-muted">{{ announcement.created_at.strftime('%d %b %Y') }}</small>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No announcements</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

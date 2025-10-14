@@ -1,79 +1,143 @@
 {% extends "base.html" %}
 
-{% block title %}Leave Requests - Company Management System{% endblock %}
+{% block title %}Leave Requests - Admin Dashboard{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2 class="mb-4">Leave Requests Management</h2>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Leave Request Management</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="badge bg-{{ 'warning' if pending_leave_requests > 0 else 'success' }} fs-6">
+            {{ pending_leave_requests }} Pending
+        </span>
     </div>
 </div>
 
-<div class="stat-card">
-    <h4>All Leave Requests</h4>
-    
-    {% if leave_requests %}
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Employee</th>
-                    <th>Leave Type</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Duration</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Requested On</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for leave in leave_requests %}
-                <tr>
-                    <td>
-                        <strong>{{ leave.employee.name }}</strong>
-                        <br>
-                        <small class="text-muted">{{ leave.employee.department or 'No department' }}</small>
-                    </td>
-                    <td>{{ leave.leave_type|title }}</td>
-                    <td>{{ leave.start_date }}</td>
-                    <td>{{ leave.end_date }}</td>
-                    <td>
-                        {% set duration = (leave.end_date - leave.start_date).days + 1 %}
-                        {{ duration }} day(s)
-                    </td>
-                    <td>{{ leave.reason or '-' }}</td>
-                    <td>
-                        <span class="badge bg-{{ 'success' if leave.status == 'approved' else 'warning' if leave.status == 'pending' else 'danger' }}">
-                            {{ leave.status|title }}
-                        </span>
-                    </td>
-                    <td>{{ leave.created_at.strftime('%Y-%m-%d') }}</td>
-                    <td>
-                        {% if leave.status == 'pending' %}
-                        <div class="btn-group btn-group-sm">
-                            <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='approved') }}" class="btn btn-success" title="Approve">
-                                <i class="fas fa-check"></i>
-                            </a>
-                            <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='rejected') }}" class="btn btn-danger" title="Reject">
-                                <i class="fas fa-times"></i>
-                            </a>
-                        </div>
-                        {% else %}
-                        <span class="text-muted">Processed</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-calendar-check me-2"></i>All Leave Requests</h5>
     </div>
-    {% else %}
-    <div class="text-center py-4">
-        <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
-        <p class="text-muted">No leave requests found.</p>
+    <div class="card-body">
+        {% if leave_requests %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Leave Type</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Duration</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leave in leave_requests %}
+                    <tr>
+                        <td>
+                            <strong>{{ leave.employee.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ leave.employee.department }}</small>
+                        </td>
+                        <td>{{ leave.leave_type|title }}</td>
+                        <td>{{ leave.start_date.strftime('%d %b %Y') }}</td>
+                        <td>{{ leave.end_date.strftime('%d %b %Y') }}</td>
+                        <td>
+                            {% set duration = (leave.end_date - leave.start_date).days + 1 %}
+                            {{ duration }} day{% if duration > 1 %}s{% endif %}
+                        </td>
+                        <td>{{ leave.reason[:50] }}{% if leave.reason|length > 50 %}...{% endif %}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if leave.status == 'approved' else 'warning' if leave.status == 'pending' else 'danger' }}">
+                                {{ leave.status|title }}
+                            </span>
+                        </td>
+                        <td>{{ leave.created_at.strftime('%d %b %Y') }}</td>
+                        <td>
+                            {% if leave.status == 'pending' %}
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='approved') }}" 
+                                   class="btn btn-outline-success" 
+                                   onclick="return confirm('Approve this leave request?')"
+                                   title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                                <a href="{{ url_for('admin_leave_request_update', request_id=leave.id, status='rejected') }}" 
+                                   class="btn btn-outline-danger"
+                                   onclick="return confirm('Reject this leave request?')"
+                                   title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                            {% else %}
+                            <small class="text-muted">Processed</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+            <h5>No Leave Requests</h5>
+            <p class="text-muted">There are no leave requests in the system.</p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
+</div>
+
+<!-- Leave Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <h4>{{ leave_requests|length }}</h4>
+                <p class="mb-0">Total Requests</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body text-center">
+                <h4>{{ leave_requests|selectattr('status', 'equalto', 'pending')|list|length }}</h4>
+                <p class="mb-0">Pending</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body text-center">
+                <h4>{{ leave_requests|selectattr('status', 'equalto', 'approved')|list|length }}</h4>
+                <p class="mb-0">Approved</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body text-center">
+                <h4>{{ leave_requests|selectattr('status', 'equalto', 'rejected')|list|length }}</h4>
+                <p class="mb-0">Rejected</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="card-title mb-0"><i class="fas fa-tachometer-alt me-2"></i>Quick Filters</h6>
+    </div>
+    <div class="card-body">
+        <div class="btn-group">
+            <a href="{{ url_for('admin_leave_requests') }}" class="btn btn-outline-primary">All Requests</a>
+            <a href="{{ url_for('admin_leave_requests') }}?filter=pending" class="btn btn-outline-warning">Pending Only</a>
+            <a href="{{ url_for('admin_leave_requests') }}?filter=approved" class="btn btn-outline-success">Approved Only</a>
+            <a href="{{ url_for('admin_leave_requests') }}?filter=rejected" class="btn btn-outline-danger">Rejected Only</a>
+        </div>
+    </div>
 </div>
 {% endblock %}

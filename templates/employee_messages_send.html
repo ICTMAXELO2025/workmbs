@@ -1,52 +1,60 @@
 {% extends "base.html" %}
 
-{% block title %}Send Message - Company Management System{% endblock %}
+{% block title %}Send Message - Employee Dashboard{% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Send Message</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employee_messages') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Inbox
+        </a>
+    </div>
+</div>
+
 <div class="row justify-content-center">
     <div class="col-md-8">
-        <div class="stat-card">
-            <h2 class="mb-4">Send Message</h2>
-            
-            <form method="POST">
-                <div class="mb-3">
-                    <label for="receiver_id" class="form-label">Recipient *</label>
-                    <select class="form-select" id="receiver_id" name="receiver_id" required>
-                        <option value="">Select Recipient</option>
-                        {% for employee in employees %}
-                        <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                {% if recent_contacts %}
-                <div class="mb-3">
-                    <label class="form-label">Recent Contacts</label>
-                    <div class="d-flex flex-wrap gap-2">
-                        {% for contact in recent_contacts %}
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('receiver_id').value='{{ contact.id }}'">
-                            {{ contact.name }}
-                        </button>
-                        {% endfor %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-paper-plane me-2"></i>Compose Message</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('employee_messages_send') }}">
+                    <div class="mb-3">
+                        <label for="receiver_id" class="form-label">Recipient *</label>
+                        <select class="form-select" id="receiver_id" name="receiver_id" required>
+                            <option value="">Select Recipient</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department }})</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                </div>
-                {% endif %}
 
-                <div class="mb-3">
-                    <label for="subject" class="form-label">Subject *</label>
-                    <input type="text" class="form-control" id="subject" name="subject" required>
-                </div>
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject *</label>
+                        <input type="text" class="form-control" id="subject" name="subject" 
+                               placeholder="Enter message subject" required>
+                    </div>
 
-                <div class="mb-3">
-                    <label for="content" class="form-label">Message *</label>
-                    <textarea class="form-control" id="content" name="content" rows="6" required placeholder="Type your message here..."></textarea>
-                </div>
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Message *</label>
+                        <textarea class="form-control" id="content" name="content" rows="8" 
+                                  placeholder="Type your message here..." required></textarea>
+                    </div>
 
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('employee_messages') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
-                </div>
-            </form>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Your message will be sent directly to the selected recipient.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('employee_messages') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

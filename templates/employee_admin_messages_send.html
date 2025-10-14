@@ -1,34 +1,94 @@
 {% extends "base.html" %}
 
-{% block title %}Send Message to Admin - Company Management System{% endblock %}
+{% block title %}Send Message to Admin - Employee Dashboard{% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Send Message to Admin</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Messages
+        </a>
+    </div>
+</div>
+
 <div class="row justify-content-center">
     <div class="col-md-8">
-        <div class="stat-card">
-            <h2 class="mb-4">Send Message to Administration</h2>
-            
-            <form method="POST">
-                <div class="mb-3">
-                    <label for="subject" class="form-label">Subject *</label>
-                    <input type="text" class="form-control" id="subject" name="subject" required placeholder="Brief subject of your message">
-                </div>
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-headset me-2"></i>Contact Administration</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('employee_admin_messages_send') }}">
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject *</label>
+                        <input type="text" class="form-control" id="subject" name="subject" 
+                               placeholder="Brief subject of your message" required>
+                    </div>
 
-                <div class="mb-3">
-                    <label for="content" class="form-label">Message *</label>
-                    <textarea class="form-control" id="content" name="content" rows="8" required placeholder="Describe your query, concern, or suggestion in detail..."></textarea>
-                </div>
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Message *</label>
+                        <textarea class="form-control" id="content" name="content" rows="8" 
+                                  placeholder="Please describe your inquiry, concern, or request in detail..." required></textarea>
+                    </div>
 
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    Your message will be sent directly to the administration team. They will respond as soon as possible.
-                </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Your message will be sent directly to the system administrators. 
+                        They will respond as soon as possible.
+                    </div>
 
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('employee_admin_messages') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Send to Admin
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Common Topics -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="fas fa-question-circle me-2"></i>Common Message Topics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong>HR & Policies</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>Leave policy questions</li>
+                            <li>Benefits inquiries</li>
+                            <li>Contract questions</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Technical Support</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>System access issues</li>
+                            <li>Password reset requests</li>
+                            <li>Feature requests</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Administrative</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>Document requests</li>
+                            <li>Personal information updates</li>
+                            <li>Training requests</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Other Inquiries</strong>
+                        <ul class="small text-muted mt-1">
+                            <li>General questions</li>
+                            <li>Feedback & suggestions</li>
+                            <li>Concerns & reports</li>
+                        </ul>
+                    </div>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>

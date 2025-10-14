@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Document - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Upload Document</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_documents') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Documents
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-upload me-2"></i>Upload Document for Employee</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_document_upload') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="employee_id" class="form-label">Select Employee *</label>
+                        <select class="form-select" id="employee_id" name="employee_id" required>
+                            <option value="">Choose Employee</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.department }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select File *</label>
+                        <input type="file" class="form-control" id="file" name="file" 
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.pptx,.ppt,.csv" required>
+                        <div class="form-text">
+                            Allowed formats: PDF, Word, Excel, PowerPoint, Text, Images, CSV (Max: 10MB)
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description *</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Describe the purpose and content of this document..." required></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This document will be uploaded to the selected employee's document library.
+                        The employee will be able to view and download it.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_documents') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>Upload Document
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Uploads -->
+        {% if recent_documents %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="fas fa-history me-2"></i>Recently Uploaded Documents</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for doc in recent_documents %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-file-{{ 'pdf' if doc.filename.endswith('.pdf') else 'word' if doc.filename.endswith(('.doc', '.docx')) else 'excel' if doc.filename.endswith(('.xls', '.xlsx')) else 'image' if doc.filename.endswith(('.png', '.jpg', '.jpeg')) else 'text' }} me-2"></i>
+                                {{ doc.original_filename }}
+                            </h6>
+                            <small class="text-muted">{{ format_file_size(doc.file_size) }}</small>
+                        </div>
+                        <p class="mb-1">{{ doc.description or 'No description' }}</p>
+                        <small class="text-muted">For: {{ doc.employee.name }} • {{ doc.created_at.strftime('%d %b %Y') }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

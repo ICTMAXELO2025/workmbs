@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Assigned Tasks - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Assigned Tasks</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_todo_add') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Assign New Task
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-tasks me-2"></i>Tasks Assigned to Employees</h5>
+    </div>
+    <div class="card-body">
+        {% if assigned_todos %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Task Description</th>
+                        <th>Priority</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Assigned</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for todo in assigned_todos %}
+                    <tr>
+                        <td>
+                            <strong>{{ todo.employee.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ todo.employee.department }}</small>
+                        </td>
+                        <td>{{ todo.content }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'danger' if todo.priority == 'high' else 'warning' if todo.priority == 'medium' else 'success' }}">
+                                {{ todo.priority|title }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if todo.due_date %}
+                                {% if todo.due_date < today %}
+                                <span class="text-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    {{ todo.due_date.strftime('%d %b %Y') }}
+                                </span>
+                                {% elif todo.due_date == today %}
+                                <span class="text-warning">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Today
+                                </span>
+                                {% else %}
+                                {{ todo.due_date.strftime('%d %b %Y') }}
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">No due date</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if todo.is_completed %}
+                            <span class="badge bg-success">Completed</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ todo.created_at.strftime('%d %b %Y') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if not todo.is_completed %}
+                                <a href="#" class="btn btn-outline-success" title="Mark Complete">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                                {% endif %}
+                                <a href="#" class="btn btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="#" class="btn btn-outline-danger" title="Delete"
+                                   onclick="return confirm('Are you sure you want to delete this task?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h5>No Tasks Assigned</h5>
+            <p class="text-muted">You haven't assigned any tasks to employees yet.</p>
+            <a href="{{ url_for('admin_todo_add') }}" class="btn btn-primary">Assign First Task</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Task Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <h4>{{ assigned_todos|length }}</h4>
+                <p class="mb-0">Total Tasks</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body text-center">
+                <h4>{{ assigned_todos|rejectattr('is_completed')|list|length }}</h4>
+                <p class="mb-0">Pending</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body text-center">
+                <h4>{{ assigned_todos|selectattr('is_completed')|list|length }}</h4>
+                <p class="mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body text-center">
+                <h4>{{ assigned_todos|rejectattr('is_completed')|selectattr('due_date')|select('less_than', today)|list|length }}</h4>
+                <p class="mb-0">Overdue</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Priority Breakdown -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="card-title mb-0"><i class="fas fa-chart-pie me-2"></i>Task Priority Distribution</h6>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="card bg-danger text-white mb-3">
+                    <div class="card-body">
+                        <h4>{{ assigned_todos|selectattr('priority', 'equalto', 'high')|list|length }}</h4>
+                        <p class="mb-0">High Priority</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-warning text-white mb-3">
+                    <div class="card-body">
+                        <h4>{{ assigned_todos|selectattr('priority', 'equalto', 'medium')|list|length }}</h4>
+                        <p class="mb-0">Medium Priority</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-success text-white mb-3">
+                    <div class="card-body">
+                        <h4>{{ assigned_todos|selectattr('priority', 'equalto', 'low')|list|length }}</h4>
+                        <p class="mb-0">Low Priority</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

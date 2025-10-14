@@ -1,10 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
+# app.py
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 import re
 from functools import wraps
+import pytz
+
+import secrets
 
 # Initialize Flask app first
 app = Flask(__name__)
@@ -38,6 +42,15 @@ from models import db, Employee, Admin, LeaveRequest, Message, Todo, Document, A
 # Initialize database with app
 db.init_app(app)
 
+# South Africa timezone
+SAST = pytz.timezone('Africa/Johannesburg')
+
+def get_sast_time():
+    return datetime.now(SAST)
+
+# Password reset tokens storage (in production, use Redis or database)
+password_reset_tokens = {}
+
 def setup_database():
     """Setup database tables and initial data"""
     with app.app_context():
@@ -51,7 +64,7 @@ def setup_database():
                 # Create default admin user
                 default_admin = Admin(
                     email='admin@maxelo.com',
-                    password=generate_password_hash('admin123'),
+                    password=generate_password_hash('Maxelo@2023'),
                     name='System Administrator'
                 )
                 db.session.add(default_admin)
@@ -62,11 +75,9 @@ def setup_database():
             
         except Exception as e:
             print(f"Database setup error: {e}")
-            # Don't raise the error, just log it
             import traceback
             traceback.print_exc()
 
-# Modern approach for database initialization
 def initialize_database():
     """Initialize database when app starts"""
     try:
@@ -76,7 +87,7 @@ def initialize_database():
         print(f"Database initialization note: {e}")
         print("This is normal if database isn't ready yet - tables will be created on first request")
 
-# Initialize database (but don't crash if it fails)
+# Initialize database
 initialize_database()
 
 def login_required(role=None):
@@ -144,27 +155,28 @@ def get_database_info():
 # Make database info available to templates
 app.jinja_env.globals.update(get_database_info=get_database_info)
 
+def send_password_reset_email(email, reset_token, user_role):
+    """Simulate password reset email sending"""
+    # In production, implement actual email sending
+    # For demo, we'll just return True to simulate success
+    print(f"Demo: Password reset link for {email}: /reset-password/{reset_token}")
+    return True
 # Routes
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
+
 @app.route('/')
 def index():
-    """Main index page with links to both login types"""
+    """Main index page with links to employee login only"""
     return render_template('index.html')
 
-import time
-from flask import request
-import logging
-
-@app.before_request
-def before_request():
-    request.start_time = time.time()
-
-@app.after_request
-def after_request(response):
-    if hasattr(request, 'start_time'):
-        elapsed = time.time() - request.start_time
-        if elapsed > 1.0:  # Log slow requests (>1 second)
-            logging.warning(f"Slow request: {request.path} took {elapsed:.2f}s")
-    return response
+@app.route('/admin/secret-login')
+def admin_secret_login():
+    """Secret admin login URL - not linked from main page"""
+    if 'user_id' in session and session.get('user_role') == 'admin':
+        return redirect(url_for('admin_dashboard'))
+    return render_template('admin_login.html')
 
 # Authentication Routes
 @app.route('/employee/login', methods=['GET', 'POST'])
@@ -184,17 +196,14 @@ def employee_login():
             employee = Employee.query.filter_by(email=email, is_active=True).first()
             
             if employee and check_password_hash(employee.password, password):
-                # Clear any existing session
                 session.clear()
-                
-                # Set new session
                 session['user_id'] = employee.id
                 session['user_role'] = 'employee'
                 session['user_name'] = employee.name
                 session['user_email'] = employee.email
                 session.permanent = True
                 
-                employee.last_login = datetime.utcnow()
+                employee.last_login = get_sast_time()
                 db.session.commit()
                 
                 flash('Login successful!', 'success')
@@ -226,14 +235,13 @@ def admin_login():
             
             if admin and check_password_hash(admin.password, password):
                 session.clear()
-                
                 session['user_id'] = admin.id
                 session['user_role'] = 'admin'
                 session['user_name'] = admin.name
                 session['user_email'] = admin.email
                 session.permanent = True
                 
-                admin.last_login = datetime.utcnow()
+                admin.last_login = get_sast_time()
                 db.session.commit()
                 
                 flash('Admin login successful!', 'success')
@@ -247,70 +255,109 @@ def admin_login():
     
     return render_template('admin_login.html')
 
-# Quick Access Routes (for development/demo)
-@app.route('/employee/quick')
-def employee_quick_access():
-    """Quick access for demo purposes"""
-    key = request.args.get('key', '')
-    if key == 'employee123':
-        # Create or get demo employee
-        demo_employee = Employee.query.filter_by(email='demo@employee.com').first()
-        if not demo_employee:
-            demo_employee = Employee(
-                email='demo@employee.com',
-                password=generate_password_hash('demo123'),
-                name='Demo Employee',
-                department='IT',
-                position='Developer',
-                is_active=True
-            )
-            db.session.add(demo_employee)
-            db.session.commit()
+# Forgot Password Routes
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        employee_id = request.form.get('employee_id', '').strip()
         
-        session.clear()
-        session['user_id'] = demo_employee.id
-        session['user_role'] = 'employee'
-        session['user_name'] = demo_employee.name
-        session['user_email'] = demo_employee.email
+        if not email or not employee_id:
+            flash('Please enter both email and employee ID', 'error')
+            return render_template('forgot_password.html')
         
-        flash('Demo employee login successful!', 'success')
-        return redirect(url_for('employee_dashboard'))
+        # Check if it's an employee
+        employee = Employee.query.filter_by(email=email, id=employee_id, is_active=True).first()
+        if employee:
+            # Generate reset token
+            reset_token = secrets.token_urlsafe(32)
+            password_reset_tokens[reset_token] = {
+                'email': email,
+                'user_id': employee_id,
+                'user_role': 'employee',
+                'expires': get_sast_time() + timedelta(hours=1)
+            }
+            send_password_reset_email(email, reset_token, 'employee')
+            flash('If an account exists with this email, a password reset link has been sent.', 'info')
+            return redirect(url_for('employee_login'))
+        
+        # Check if it's an admin (admins don't have employee IDs)
+        admin = Admin.query.filter_by(email=email).first()
+        if admin:
+            reset_token = secrets.token_urlsafe(32)
+            password_reset_tokens[reset_token] = {
+                'email': email,
+                'user_id': admin.id,
+                'user_role': 'admin',
+                'expires': get_sast_time() + timedelta(hours=1)
+            }
+            send_password_reset_email(email, reset_token, 'admin')
+            flash('If an account exists with this email, a password reset link has been sent.', 'info')
+            return redirect(url_for('admin_login'))
+        
+        # If no user found
+        flash('If an account exists with this email, a password reset link has been sent.', 'info')
+        return redirect(url_for('employee_login'))
     
-    flash('Invalid quick access key', 'error')
-    return redirect(url_for('employee_login'))
+    return render_template('forgot_password.html')
 
-@app.route('/admin/quick')
-def admin_quick_access():
-    """Quick access for demo purposes"""
-    key = request.args.get('key', '')
-    if key == 'maxelo':
-        # Create or get demo admin
-        demo_admin = Admin.query.filter_by(email='admin@maxelo.com').first()
-        if not demo_admin:
-            demo_admin = Admin(
-                email='admin@maxelo.com',
-                password=generate_password_hash('admin123'),
-                name='System Administrator'
-            )
-            db.session.add(demo_admin)
-            db.session.commit()
-        
-        session.clear()
-        session['user_id'] = demo_admin.id
-        session['user_role'] = 'admin'
-        session['user_name'] = demo_admin.name
-        session['user_email'] = demo_admin.email
-        
-        flash('Demo admin login successful!', 'success')
-        return redirect(url_for('admin_dashboard'))
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    token_data = password_reset_tokens.get(token)
     
-    flash('Invalid quick access key', 'error')
-    return redirect(url_for('admin_login'))
+    if not token_data:
+        flash('Invalid or expired reset token', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    if get_sast_time() > token_data['expires']:
+        del password_reset_tokens[token]
+        flash('Reset token has expired', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        new_password = request.form.get('new_password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+        
+        if not new_password or not confirm_password:
+            flash('Please fill in all fields', 'error')
+            return render_template('reset_password.html', token=token)
+        
+        if new_password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('reset_password.html', token=token)
+        
+        if len(new_password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('reset_password.html', token=token)
+        
+        try:
+            if token_data['user_role'] == 'employee':
+                user = Employee.query.get(token_data['user_id'])
+            else:
+                user = Admin.query.get(token_data['user_id'])
+            
+            if user and user.email == token_data['email']:
+                user.password = generate_password_hash(new_password)
+                db.session.commit()
+                del password_reset_tokens[token]
+                flash('Password reset successfully! Please log in with your new password.', 'success')
+                
+                if token_data['user_role'] == 'employee':
+                    return redirect(url_for('employee_login'))
+                else:
+                    return redirect(url_for('admin_login'))
+            else:
+                flash('Invalid reset token', 'error')
+                
+        except Exception as e:
+            db.session.rollback()
+            flash('Error resetting password', 'error')
+    
+    return render_template('reset_password.html', token=token)
 
 # Logout Routes
 @app.route('/logout')
 def logout():
-    """General logout route"""
     user_role = session.get('user_role')
     session.clear()
     flash('You have been logged out successfully.', 'info')
@@ -326,11 +373,8 @@ def logout():
 def employee_dashboard():
     try:
         current_user = get_current_user()
-        if not current_user:
-            flash('User not found', 'error')
-            return redirect(url_for('logout'))
         
-        # Get statistics with proper error handling
+        # Get statistics
         pending_leaves = LeaveRequest.query.filter_by(
             employee_id=current_user.id, 
             status='pending'
@@ -344,11 +388,6 @@ def employee_dashboard():
         pending_todos = Todo.query.filter_by(
             employee_id=current_user.id, 
             is_completed=False
-        ).count()
-        
-        approved_leaves = LeaveRequest.query.filter_by(
-            employee_id=current_user.id, 
-            status='approved'
         ).count()
         
         # Get recent data
@@ -379,34 +418,69 @@ def employee_dashboard():
             is_active=True
         ).order_by(Announcement.created_at.desc()).limit(3).all()
         
+        # Get notifications (recent activities)
+        notifications = []
+        
+        # Add unread messages as notifications
+        unread_msg_notifications = Message.query.filter_by(
+            receiver_id=current_user.id, 
+            is_read=False
+        ).order_by(Message.created_at.desc()).limit(5).all()
+        
+        for msg in unread_msg_notifications:
+            notifications.append({
+                'type': 'message',
+                'content': f'New message from {msg.sender.name}',
+                'time': msg.created_at,
+                'link': url_for('employee_messages')
+            })
+        
+        # Add leave status updates
+        recent_leave_updates = LeaveRequest.query.filter_by(
+            employee_id=current_user.id
+        ).filter(LeaveRequest.status.in_(['approved', 'rejected'])).order_by(
+            LeaveRequest.updated_at.desc()
+        ).limit(5).all()
+        
+        for leave in recent_leave_updates:
+            notifications.append({
+                'type': 'leave',
+                'content': f'Your leave request has been {leave.status}',
+                'time': leave.updated_at,
+                'link': url_for('employee_leave')
+            })
+        
+        # Sort notifications by time
+        notifications.sort(key=lambda x: x['time'], reverse=True)
+        notifications = notifications[:10]  # Limit to 10 most recent
+        
         return render_template('employee_dashboard.html',
                              pending_leaves=pending_leaves,
                              unread_messages=unread_messages,
                              pending_todos=pending_todos,
-                             approved_leaves=approved_leaves,
                              recent_leaves=recent_leaves,
                              recent_messages=recent_messages,
                              upcoming_todos=upcoming_todos,
                              recent_documents=recent_documents,
                              admin_messages=admin_messages,
                              announcements=announcements,
+                             notifications=notifications,
                              today=date.today(),
                              current_user=current_user)
                              
     except Exception as e:
         flash('Error loading dashboard', 'error')
-        # Provide safe fallback values
         return render_template('employee_dashboard.html',
                              pending_leaves=0,
                              unread_messages=0,
                              pending_todos=0,
-                             approved_leaves=0,
                              recent_leaves=[],
                              recent_messages=[],
                              upcoming_todos=[],
                              recent_documents=[],
                              admin_messages=[],
                              announcements=[],
+                             notifications=[],
                              today=date.today(),
                              current_user=get_current_user())
 
@@ -435,7 +509,6 @@ def employee_leave_request():
             end_date_str = request.form.get('end_date')
             reason = request.form.get('reason', '').strip()
             
-            # Validation
             if not all([leave_type, start_date_str, end_date_str]):
                 flash('Please fill in all required fields', 'error')
                 return render_template('employee_leave_request.html', current_user=current_user)
@@ -481,6 +554,12 @@ def employee_messages():
     messages = Message.query.filter_by(
         receiver_id=current_user.id
     ).order_by(Message.created_at.desc()).all()
+    
+    # Mark messages as read when viewing
+    for message in messages:
+        if not message.is_read:
+            message.is_read = True
+    db.session.commit()
     
     return render_template('employee_messages.html', 
                          messages=messages, 
@@ -533,16 +612,8 @@ def employee_messages_send():
         Employee.id != current_user.id
     ).all()
     
-    # Get recent contacts (last 5 people messaged)
-    recent_contacts = Employee.query.join(
-        Message, Employee.id == Message.receiver_id
-    ).filter(
-        Message.sender_id == current_user.id
-    ).distinct().limit(5).all()
-    
     return render_template('employee_messages_send.html',
                          employees=employees,
-                         recent_contacts=recent_contacts,
                          current_user=current_user)
 
 # Employee Documents
@@ -576,16 +647,16 @@ def employee_documents_upload():
             
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                # Get file size without reading entire file
-                file.seek(0, 2)  # Seek to end
-                file_size = file.tell()  # Get position (file size)
-                file.seek(0)  # Reset to beginning
+                # In production, save the file to storage
+                file.seek(0, 2)
+                file_size = file.tell()
+                file.seek(0)
                 
                 document = Document(
                     employee_id=current_user.id,
                     filename=filename,
                     original_filename=filename,
-                    file_path=f"/uploads/{filename}",  # Placeholder
+                    file_path=f"/uploads/{filename}",
                     file_size=file_size,
                     description=request.form.get('description', '').strip(),
                     uploaded_by_admin=False
@@ -721,6 +792,41 @@ def admin_dashboard():
             db.joinedload(AdminMessage.sender)
         ).order_by(AdminMessage.created_at.desc()).limit(5).all()
         
+        # Get admin notifications
+        notifications = []
+        
+        # Pending leave requests
+        if pending_leave_requests > 0:
+            notifications.append({
+                'type': 'leave',
+                'content': f'{pending_leave_requests} pending leave requests',
+                'time': get_sast_time(),
+                'link': url_for('admin_leave_requests')
+            })
+        
+        # Unread admin messages
+        if unread_admin_messages > 0:
+            notifications.append({
+                'type': 'message',
+                'content': f'{unread_admin_messages} unread employee messages',
+                'time': get_sast_time(),
+                'link': url_for('admin_messages')
+            })
+        
+        # Recent employee activities
+        recent_employees = Employee.query.filter_by(is_active=True).order_by(
+            Employee.last_login.desc()
+        ).limit(3).all()
+        
+        for emp in recent_employees:
+            if emp.last_login:
+                notifications.append({
+                    'type': 'activity',
+                    'content': f'{emp.name} logged in recently',
+                    'time': emp.last_login,
+                    'link': url_for('admin_employees')
+                })
+        
         return render_template('admin_dashboard.html',
                              total_employees=total_employees,
                              pending_leave_requests=pending_leave_requests,
@@ -728,6 +834,7 @@ def admin_dashboard():
                              active_employees=active_employees,
                              pending_leaves=pending_leaves,
                              recent_messages=recent_messages,
+                             notifications=notifications,
                              current_user=current_user)
                              
     except Exception as e:
@@ -739,6 +846,7 @@ def admin_dashboard():
                              active_employees=0,
                              pending_leaves=[],
                              recent_messages=[],
+                             notifications=[],
                              current_user=current_user)
 
 # Admin Employee Management
@@ -805,6 +913,40 @@ def admin_employees_add():
     
     return render_template('admin_employees_add.html', current_user=current_user)
 
+@app.route('/admin/employee/<int:employee_id>/edit', methods=['GET', 'POST'])
+@login_required(role='admin')
+def admin_employee_edit(employee_id):
+    current_user = get_current_user()
+    employee = Employee.query.get_or_404(employee_id)
+    
+    if request.method == 'POST':
+        try:
+            employee.name = request.form.get('name', employee.name)
+            employee.email = request.form.get('email', employee.email).lower()
+            employee.phone = request.form.get('phone', employee.phone)
+            employee.department = request.form.get('department', employee.department)
+            employee.position = request.form.get('position', employee.position)
+            
+            new_password = request.form.get('password', '').strip()
+            if new_password:
+                if len(new_password) >= 6:
+                    employee.password = generate_password_hash(new_password)
+                else:
+                    flash('Password must be at least 6 characters long', 'error')
+                    return redirect(url_for('admin_employee_edit', employee_id=employee_id))
+            
+            db.session.commit()
+            flash('Employee updated successfully!', 'success')
+            return redirect(url_for('admin_employees'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating employee', 'error')
+    
+    return render_template('admin_employee_edit.html', 
+                         employee=employee, 
+                         current_user=current_user)
+
 @app.route('/admin/employee/<int:employee_id>/toggle')
 @login_required(role='admin')
 def admin_employee_toggle_status(employee_id):
@@ -861,12 +1003,16 @@ def admin_leave_request_update(request_id):
     
     try:
         status = request.args.get('status')
+        admin_notes = request.args.get('admin_notes', '')
+        
         if status not in ['approved', 'rejected']:
             flash('Invalid status', 'error')
             return redirect(url_for('admin_leave_requests'))
         
         leave_request = LeaveRequest.query.get_or_404(request_id)
         leave_request.status = status
+        leave_request.admin_notes = admin_notes
+        leave_request.updated_at = get_sast_time()
         db.session.commit()
         
         flash(f'Leave request {status} successfully!', 'success')
@@ -906,6 +1052,8 @@ def update_profile():
         
         if session.get('user_role') == 'employee':
             current_user.phone = request.form.get('phone', current_user.phone)
+            current_user.department = request.form.get('department', current_user.department)
+            current_user.position = request.form.get('position', current_user.position)
         
         new_password = request.form.get('new_password', '').strip()
         confirm_password = request.form.get('confirm_password', '').strip()
@@ -923,7 +1071,7 @@ def update_profile():
                 return redirect(url_for('profile'))
         
         db.session.commit()
-        session['user_name'] = current_user.name  # Update session
+        session['user_name'] = current_user.name
         flash('Profile updated successfully!', 'success')
         
     except Exception as e:
@@ -960,7 +1108,7 @@ def admin_message_respond(message_id):
         
         message.admin_response = response
         message.is_read = True
-        message.updated_at = datetime.utcnow()
+        message.updated_at = get_sast_time()
         db.session.commit()
         
         flash('Response sent successfully!', 'success')
@@ -979,7 +1127,7 @@ def admin_message_mark_read(message_id):
     try:
         message = AdminMessage.query.get_or_404(message_id)
         message.is_read = True
-        message.updated_at = datetime.utcnow()
+        message.updated_at = get_sast_time()
         db.session.commit()
         flash('Message marked as read', 'success')
         
@@ -1008,12 +1156,6 @@ def admin_send_message():
             # Get recipients based on selection
             if recipient_type == 'all':
                 recipients = Employee.query.filter_by(is_active=True).all()
-                selected_employees = request.form.getlist('selected_employees')
-                if selected_employees:
-                    recipients = Employee.query.filter(
-                        Employee.id.in_(selected_employees),
-                        Employee.is_active == True
-                    ).all()
             else:
                 selected_employees = request.form.getlist('selected_employees')
                 if not selected_employees:
@@ -1031,7 +1173,7 @@ def admin_send_message():
             # Create messages for each recipient
             for recipient in recipients:
                 message = Message(
-                    sender_id=current_user.id,  # Admin sending as themselves
+                    sender_id=current_user.id,
                     receiver_id=recipient.id,
                     subject=subject,
                     content=content
@@ -1057,49 +1199,38 @@ def admin_send_message():
 def admin_documents():
     current_user = get_current_user()
     documents = Document.query.options(
-        db.joinedload(Document.employee),
-        db.joinedload(Document.admin)
-    ).order_by(Document.created_at.desc()).all()
-    
-    recent_documents = Document.query.options(
         db.joinedload(Document.employee)
-    ).order_by(Document.created_at.desc()).limit(5).all()
+    ).order_by(Document.created_at.desc()).all()
     
     return render_template('admin_documents.html',
                          documents=documents,
-                         recent_documents=recent_documents,
                          current_user=current_user)
 
-@app.route('/admin/documents/add', methods=['GET', 'POST'])
+@app.route('/admin/documents/upload', methods=['GET', 'POST'])
 @login_required(role='admin')
-def admin_document_add():
+def admin_document_upload():
     current_user = get_current_user()
     
     if request.method == 'POST':
         try:
             employee_id = request.form.get('employee_id')
             description = request.form.get('description', '').strip()
-            document_type = request.form.get('doc_type', 'other')
-            tags = request.form.get('tags', '').strip()
-            send_notification = 'send_notification' in request.form
-            is_important = 'is_important' in request.form
             
             if not employee_id or not description:
                 flash('Please fill in all required fields', 'error')
-                return redirect(url_for('admin_document_add'))
+                return redirect(url_for('admin_document_upload'))
             
-            if 'document' not in request.files:
+            if 'file' not in request.files:
                 flash('No file selected', 'error')
-                return redirect(url_for('admin_document_add'))
+                return redirect(url_for('admin_document_upload'))
             
-            file = request.files['document']
+            file = request.files['file']
             if file.filename == '':
                 flash('No file selected', 'error')
-                return redirect(url_for('admin_document_add'))
+                return redirect(url_for('admin_document_upload'))
             
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                # Get file size without reading entire file
                 file.seek(0, 2)
                 file_size = file.tell()
                 file.seek(0)
@@ -1108,23 +1239,15 @@ def admin_document_add():
                     employee_id=employee_id,
                     filename=filename,
                     original_filename=filename,
-                    file_path=f"/uploads/{filename}",  # Placeholder
+                    file_path=f"/uploads/{filename}",
                     file_size=file_size,
                     description=description,
-                    document_type=document_type,
-                    tags=tags,
-                    is_important=is_important,
                     uploaded_by_admin=True,
                     admin_id=current_user.id
                 )
                 
                 db.session.add(document)
                 db.session.commit()
-                
-                if send_notification:
-                    # In production, send email notification
-                    pass
-                
                 flash('Document uploaded successfully!', 'success')
                 return redirect(url_for('admin_documents'))
             else:
@@ -1135,17 +1258,24 @@ def admin_document_add():
             flash('Error uploading document', 'error')
     
     employees = Employee.query.filter_by(is_active=True).order_by(Employee.name.asc()).all()
-    recent_documents = Document.query.options(
-        db.joinedload(Document.employee)
-    ).order_by(Document.created_at.desc()).limit(5).all()
-    
-    return render_template('admin_document_add.html',
+    return render_template('admin_document_upload.html',
                          employees=employees,
-                         recent_documents=recent_documents,
                          current_user=current_user)
 
 # Admin Todo Management
-@app.route('/admin/todo/add', methods=['GET', 'POST'])
+@app.route('/admin/todos')
+@login_required(role='admin')
+def admin_todos():
+    current_user = get_current_user()
+    assigned_todos = AdminAssignedTodo.query.options(
+        db.joinedload(AdminAssignedTodo.employee)
+    ).order_by(AdminAssignedTodo.due_date.asc()).all()
+    
+    return render_template('admin_todos.html',
+                         assigned_todos=assigned_todos,
+                         current_user=current_user)
+
+@app.route('/admin/todos/add', methods=['GET', 'POST'])
 @login_required(role='admin')
 def admin_todo_add():
     current_user = get_current_user()
@@ -1190,7 +1320,7 @@ def admin_todo_add():
             db.session.commit()
             
             flash('Task assigned successfully!', 'success')
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin_todos'))
             
         except ValueError:
             flash('Invalid date format', 'error')
@@ -1248,7 +1378,7 @@ def employee_admin_messages_send():
     
     return render_template('employee_admin_messages_send.html', current_user=current_user)
 
-# Document Download Routes
+# Document Download Routes (placeholder)
 @app.route('/employee/document/<int:doc_id>/download')
 @login_required(role='employee')
 def employee_document_download(doc_id):
@@ -1289,46 +1419,6 @@ def employee_document_delete(doc_id):
     
     return redirect(url_for('employee_documents'))
 
-# Forgot Password Routes
-@app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        
-        if not email:
-            flash('Please enter your email address', 'error')
-            return render_template('forgot_password.html')
-        
-        # In production, send reset email
-        flash('If an account exists with this email, a password reset link has been sent.', 'info')
-        return redirect(url_for('employee_login'))
-    
-    return render_template('forgot_password.html')
-
-@app.route('/reset-password', methods=['GET', 'POST'])
-def reset_password():
-    if request.method == 'POST':
-        new_password = request.form.get('new_password', '').strip()
-        confirm_password = request.form.get('confirm_password', '').strip()
-        
-        if not new_password or not confirm_password:
-            flash('Please fill in all fields', 'error')
-            return render_template('reset_password.html')
-        
-        if new_password != confirm_password:
-            flash('Passwords do not match', 'error')
-            return render_template('reset_password.html')
-        
-        if len(new_password) < 6:
-            flash('Password must be at least 6 characters long', 'error')
-            return render_template('reset_password.html')
-        
-        # In production, update password in database
-        flash('Password reset successfully! Please log in with your new password.', 'success')
-        return redirect(url_for('employee_login'))
-    
-    return render_template('reset_password.html')
-
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
@@ -1346,19 +1436,20 @@ def forbidden_error(error):
 # Health check route
 @app.route('/health')
 def health_check():
-    """Simple health check endpoint"""
     try:
         db.session.execute('SELECT 1')
         return jsonify({
             'status': 'healthy', 
             'database': 'connected',
-            'database_type': get_database_info()
+            'database_type': get_database_info(),
+            'timestamp': get_sast_time().isoformat()
         })
     except Exception as e:
         return jsonify({
             'status': 'unhealthy', 
             'error': str(e),
-            'database_type': get_database_info()
+            'database_type': get_database_info(),
+            'timestamp': get_sast_time().isoformat()
         }), 500
 
 if __name__ == '__main__':

@@ -1,63 +1,111 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Messages - Company Management System{% endblock %}
+{% block title %}Employee Messages - Admin Dashboard{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2 class="mb-4">Employee Messages</h2>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Employee Messages</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_send_message') }}" class="btn btn-primary">
+            <i class="fas fa-bullhorn me-2"></i>Send Message
+        </a>
     </div>
 </div>
 
-<div class="stat-card">
-    <h4>Messages from Employees</h4>
-    
-    {% if messages %}
-    <div class="row">
-        {% for message in messages %}
-        <div class="col-md-6 mb-4">
-            <div class="card {{ 'border-warning' if not message.is_read }}">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>{{ message.sender.name }}</strong>
-                    <div>
-                        {% if not message.is_read %}
-                        <span class="badge bg-warning">New</span>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-inbox me-2"></i>Messages from Employees</h5>
+    </div>
+    <div class="card-body">
+        {% if messages %}
+        <div class="list-group">
+            {% for message in messages %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">
+                                {{ message.subject }}
+                                {% if not message.is_read %}
+                                <span class="badge bg-danger ms-2">New</span>
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">{{ message.created_at.strftime('%d %b %Y at %H:%M') }}</small>
+                        </div>
+                        
+                        <p class="mb-2"><strong>From:</strong> {{ message.sender.name }} ({{ message.sender.email }})</p>
+                        <p class="mb-3">{{ message.content }}</p>
+                        
+                        {% if message.admin_response %}
+                        <div class="alert alert-success">
+                            <strong><i class="fas fa-reply me-2"></i>Your Response:</strong>
+                            <p class="mb-0 mt-1">{{ message.admin_response }}</p>
+                            <small class="text-muted">Responded on {{ message.updated_at.strftime('%d %b %Y at %H:%M') }}</small>
+                        </div>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('admin_message_respond', message_id=message.id) }}" class="mt-3">
+                            <div class="mb-3">
+                                <label for="response_{{ message.id }}" class="form-label">Your Response</label>
+                                <textarea class="form-control" id="response_{{ message.id }}" name="response" 
+                                          rows="3" placeholder="Type your response here..." required></textarea>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="fas fa-reply me-2"></i>Send Response
+                                </button>
+                            </div>
+                        </form>
                         {% endif %}
-                        <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                     </div>
                 </div>
-                <div class="card-body">
-                    <h6 class="card-title">{{ message.subject }}</h6>
-                    <p class="card-text">{{ message.content }}</p>
-                    
-                    {% if message.admin_response %}
-                    <div class="alert alert-success mt-3">
-                        <strong>Your Response:</strong>
-                        <p class="mb-0">{{ message.admin_response }}</p>
-                        <small class="text-muted">Responded on: {{ message.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                    </div>
-                    {% else %}
-                    <form method="POST" action="{{ url_for('admin_message_respond', message_id=message.id) }}" class="mt-3">
-                        <div class="mb-2">
-                            <label for="response_{{ message.id }}" class="form-label">Your Response:</label>
-                            <textarea class="form-control" id="response_{{ message.id }}" name="response" rows="3" placeholder="Type your response here..." required></textarea>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success btn-sm">Send Response</button>
-                            <a href="{{ url_for('admin_message_mark_read', message_id=message.id) }}" class="btn btn-outline-secondary btn-sm">Mark as Read</a>
-                        </div>
-                    </form>
-                    {% endif %}
+                
+                {% if not message.is_read and not message.admin_response %}
+                <div class="mt-2">
+                    <a href="{{ url_for('admin_message_mark_read', message_id=message.id) }}" 
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-check me-2"></i>Mark as Read
+                    </a>
                 </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-envelope-open fa-3x text-muted mb-3"></i>
+            <h5>No Messages</h5>
+            <p class="text-muted">There are no messages from employees.</p>
+            <a href="{{ url_for('admin_send_message') }}" class="btn btn-primary">Send Message to Employees</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Message Statistics -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h4>{{ messages|length }}</h4>
+                <p class="mb-0">Total Messages</p>
             </div>
         </div>
-        {% endfor %}
     </div>
-    {% else %}
-    <div class="text-center py-4">
-        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-        <p class="text-muted">No messages from employees.</p>
+    <div class="col-md-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h4>{{ messages|rejectattr('is_read')|list|length }}</h4>
+                <p class="mb-0">Unread</p>
+            </div>
+        </div>
     </div>
-    {% endif %}
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4>{{ messages|selectattr('admin_response')|list|length }}</h4>
+                <p class="mb-0">Responded</p>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

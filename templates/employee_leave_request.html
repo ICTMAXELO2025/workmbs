@@ -1,75 +1,109 @@
 {% extends "base.html" %}
 
-{% block title %}Request Leave - Company Management System{% endblock %}
+{% block title %}Request Leave - Employee Dashboard{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="stat-card">
-            <h2 class="mb-4">Request Leave</h2>
-            
-            <form method="POST">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="leave_type" class="form-label">Leave Type *</label>
-                        <select class="form-select" id="leave_type" name="leave_type" required>
-                            <option value="">Select Leave Type</option>
-                            <option value="sick">Sick Leave</option>
-                            <option value="vacation">Vacation Leave</option>
-                            <option value="personal">Personal Leave</option>
-                            <option value="emergency">Emergency Leave</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <label for="start_date" class="form-label">Start Date *</label>
-                        <input type="date" class="form-control" id="start_date" name="start_date" min="{{ today }}" required>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="end_date" class="form-label">End Date *</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date" required>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Duration</label>
-                        <input type="text" class="form-control" id="duration" readonly>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="reason" class="form-label">Reason</label>
-                    <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Please provide a reason for your leave request..."></textarea>
-                </div>
-
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('employee_leave') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Submit Request</button>
-                </div>
-            </form>
-        </div>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Request Leave</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employee_leave') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Leaves
+        </a>
     </div>
 </div>
 
-<script>
-    // Calculate duration between dates
-    document.getElementById('start_date').addEventListener('change', calculateDuration);
-    document.getElementById('end_date').addEventListener('change', calculateDuration);
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-calendar-plus me-2"></i>New Leave Request</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('employee_leave_request') }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="leave_type" class="form-label">Leave Type *</label>
+                            <select class="form-select" id="leave_type" name="leave_type" required>
+                                <option value="">Select Leave Type</option>
+                                <option value="vacation">Vacation</option>
+                                <option value="sick">Sick Leave</option>
+                                <option value="personal">Personal Leave</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="maternity">Maternity</option>
+                                <option value="paternity">Paternity</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Start Date *</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   min="{{ today.strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
 
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">End Date *</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Duration</label>
+                            <div class="form-control" id="duration_display">0 days</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Reason for Leave *</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="4" 
+                                  placeholder="Please provide details about your leave request..." required></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Your leave request will be submitted for approval. You will be notified once it's reviewed.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('employee_leave') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+    const durationDisplay = document.getElementById('duration_display');
+    
     function calculateDuration() {
-        const startDate = new Date(document.getElementById('start_date').value);
-        const endDate = new Date(document.getElementById('end_date').value);
-        
-        if (startDate && endDate && startDate <= endDate) {
-            const diffTime = Math.abs(endDate - startDate);
+        if (startDate.value && endDate.value) {
+            const start = new Date(startDate.value);
+            const end = new Date(endDate.value);
+            const diffTime = Math.abs(end - start);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            document.getElementById('duration').value = diffDays + ' day(s)';
-        } else {
-            document.getElementById('duration').value = '';
+            durationDisplay.textContent = diffDays + ' day' + (diffDays !== 1 ? 's' : '');
         }
     }
+    
+    startDate.addEventListener('change', calculateDuration);
+    endDate.addEventListener('change', calculateDuration);
+    
+    // Set end date min to start date
+    startDate.addEventListener('change', function() {
+        endDate.min = this.value;
+        if (endDate.value && endDate.value < this.value) {
+            endDate.value = this.value;
+        }
+        calculateDuration();
+    });
+});
 </script>
 {% endblock %}

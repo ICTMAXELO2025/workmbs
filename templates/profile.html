@@ -1,134 +1,190 @@
 {% extends "base.html" %}
 
-{% block title %}Profile - Company Management System{% endblock %}
+{% block title %}My Profile - Maxelo Management{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="stat-card">
-            <h2 class="mb-4">My Profile</h2>
-            
-            <div class="row">
-                <!-- Profile Information -->
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-user-circle"></i> Personal Information
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <table class="table table-borderless">
-                                <tr>
-                                    <th>Name:</th>
-                                    <td>{{ current_user.name }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Email:</th>
-                                    <td>{{ current_user.email }}</td>
-                                </tr>
-                                {% if session.user_role == 'employee' %}
-                                <tr>
-                                    <th>Phone:</th>
-                                    <td>{{ current_user.phone or 'Not provided' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Department:</th>
-                                    <td>{{ current_user.department or 'Not assigned' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Position:</th>
-                                    <td>{{ current_user.position or 'Not assigned' }}</td>
-                                </tr>
-                                {% endif %}
-                                <tr>
-                                    <th>Role:</th>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if session.user_role == 'admin' else 'primary' }}">
-                                            {{ session.user_role|title }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Last Login:</th>
-                                    <td>{{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else 'Never' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">My Profile</h1>
+</div>
 
-                <!-- Quick Stats -->
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-chart-bar"></i> Quick Stats
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            {% if session.user_role == 'admin' %}
-                            <div class="mb-3">
-                                <strong>Total Employees:</strong>
-                                <span class="float-end">{{ employees_count }}</span>
-                            </div>
-                            <div class="mb-3">
-                                <strong>Pending Leaves:</strong>
-                                <span class="float-end">{{ pending_leaves_count }}</span>
-                            </div>
-                            {% endif %}
-                            <div class="mb-3">
-                                <strong>Account Created:</strong>
-                                <span class="float-end">{{ current_user.created_at.strftime('%Y-%m-%d') if current_user.created_at else 'Unknown' }}</span>
-                            </div>
-                        </div>
-                    </div>
+<div class="row">
+    <!-- Profile Information -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-user me-2"></i>Profile Information</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-user-circle fa-5x text-primary"></i>
+                </div>
+                <h4>{{ current_user.name }}</h4>
+                <p class="text-muted">{{ current_user.email }}</p>
+                
+                <div class="mt-4 text-start">
+                    {% if session.user_role == 'employee' %}
+                    <p><strong>Department:</strong> {{ current_user.department or 'Not set' }}</p>
+                    <p><strong>Position:</strong> {{ current_user.position or 'Not set' }}</p>
+                    <p><strong>Phone:</strong> {{ current_user.phone or 'Not set' }}</p>
+                    <p><strong>Hire Date:</strong> {{ current_user.hire_date.strftime('%d %b %Y') }}</p>
+                    {% endif %}
+                    
+                    <p><strong>Role:</strong> <span class="badge bg-{{ 'success' if session.user_role == 'admin' else 'primary' }}">{{ session.user_role|title }}</span></p>
+                    <p><strong>Last Login:</strong> 
+                        {% if current_user.last_login %}
+                        {{ current_user.last_login.strftime('%d %b %Y at %H:%M') }}
+                        {% else %}
+                        <span class="text-muted">Never</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Member Since:</strong> {{ current_user.created_at.strftime('%d %b %Y') }}</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Update Profile Form -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-edit"></i> Update Profile
-                    </h5>
+        <!-- Quick Stats -->
+        {% if session.user_role == 'admin' %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="fas fa-chart-bar me-2"></i>Admin Overview</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h4>{{ employees_count }}</h4>
+                    <p class="text-muted">Total Employees</p>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('update_profile') }}">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">Full Name *</label>
-                                <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}" required>
-                            </div>
-                            
-                            {% if session.user_role == 'employee' %}
-                            <div class="col-md-6 mb-3">
-                                <label for="phone" class="form-label">Phone Number</label>
-                                <input type="tel" class="form-control" id="phone" name="phone" value="{{ current_user.phone or '' }}">
-                            </div>
-                            {% endif %}
-                        </div>
+                <div class="text-center mt-3">
+                    <h4>{{ pending_leaves_count }}</h4>
+                    <p class="text-muted">Pending Leaves</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="new_password" class="form-label">New Password</label>
-                                <input type="password" class="form-control" id="new_password" name="new_password" placeholder="Leave blank to keep current">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="confirm_password" class="form-label">Confirm Password</label>
-                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm new password">
-                            </div>
+    <!-- Edit Profile Form -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-edit me-2"></i>Edit Profile</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_profile') }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Full Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ current_user.name }}" required>
                         </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-control" value="{{ current_user.email }}" disabled>
+                            <div class="form-text">Email cannot be changed</div>
+                        </div>
+                    </div>
 
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            Password must be at least 6 characters long.
+                    {% if session.user_role == 'employee' %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="{{ current_user.phone or '' }}">
                         </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="department" name="department" 
+                                   value="{{ current_user.department or '' }}">
+                        </div>
+                    </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Update Profile</button>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="position" class="form-label">Position</label>
+                            <input type="text" class="form-control" id="position" name="position" 
+                                   value="{{ current_user.position or '' }}">
                         </div>
-                    </form>
+                    </div>
+                    {% endif %}
+
+                    <hr class="my-4">
+
+                    <h6 class="mb-3"><i class="fas fa-lock me-2"></i>Change Password</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" 
+                                   minlength="6" placeholder="Leave blank to keep current password">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                   minlength="6" placeholder="Confirm new password">
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Password must be at least 6 characters long. Leave password fields blank if you don't want to change it.
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Account Information -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Account Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>User ID:</strong></td>
+                                <td>{{ current_user.id }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Account Type:</strong></td>
+                                <td>{{ session.user_role|title }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Timezone:</strong></td>
+                                <td>South Africa (SAST)</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Last Updated:</strong></td>
+                                <td>
+                                    {% if current_user.last_login %}
+                                    {{ current_user.last_login.strftime('%d %b %Y %H:%M') }}
+                                    {% else %}
+                                    <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Database:</strong></td>
+                                <td>{{ get_database_info() }}</td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

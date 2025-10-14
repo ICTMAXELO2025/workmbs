@@ -1,64 +1,51 @@
 {% extends "base.html" %}
 
-{% block title %}Messages - Company Management System{% endblock %}
+{% block title %}Messages - Employee Dashboard{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Messages</h2>
-            <a href="{{ url_for('employee_messages_send') }}" class="btn btn-primary">
-                <i class="fas fa-paper-plane"></i> Send Message
-            </a>
-        </div>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Messages</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employee_messages_send') }}" class="btn btn-primary">
+            <i class="fas fa-paper-plane me-2"></i>New Message
+        </a>
     </div>
 </div>
 
-<div class="stat-card">
-    <h4>Received Messages</h4>
-    
-    {% if messages %}
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>From</th>
-                    <th>Subject</th>
-                    <th>Message</th>
-                    <th>Received</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for message in messages %}
-                <tr>
-                    <td>
-                        {% if message.sender %}
-                            {{ message.sender.name }}
-                        {% else %}
-                            Admin
-                        {% endif %}
-                    </td>
-                    <td><strong>{{ message.subject }}</strong></td>
-                    <td>{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</td>
-                    <td>{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>
-                        {% if message.is_read %}
-                        <span class="badge bg-success">Read</span>
-                        {% else %}
-                        <span class="badge bg-warning">Unread</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-inbox me-2"></i>Inbox</h5>
     </div>
-    {% else %}
-    <div class="text-center py-4">
-        <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
-        <p class="text-muted">No messages received yet.</p>
+    <div class="card-body">
+        {% if messages %}
+        <div class="list-group">
+            {% for message in messages %}
+            <div class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            {{ message.subject }}
+                            {% if not message.is_read %}
+                            <span class="badge bg-danger ms-2">New</span>
+                            {% endif %}
+                        </h6>
+                        <p class="mb-1">{{ message.content[:150] }}{% if message.content|length > 150 %}...{% endif %}</p>
+                        <small class="text-muted">
+                            From: {{ message.sender.name }} • {{ message.created_at.strftime('%d %b %Y at %H:%M') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-envelope-open fa-3x text-muted mb-3"></i>
+            <h5>No Messages</h5>
+            <p class="text-muted">Your inbox is empty.</p>
+            <a href="{{ url_for('employee_messages_send') }}" class="btn btn-primary">Send Your First Message</a>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endblock %}

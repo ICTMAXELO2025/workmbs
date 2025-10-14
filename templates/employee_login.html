@@ -1,42 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Employee Login - Company Management System{% endblock %}
+{% block title %}Employee Login - Maxelo Management{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <div class="stat-card">
-            <div class="text-center mb-4">
-                <i class="fas fa-user-tie fa-3x text-primary mb-3"></i>
-                <h2>Employee Login</h2>
-                <p class="text-muted">Sign in to your employee account</p>
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0"><i class="fas fa-user-tie me-2"></i>Employee Login</h4>
             </div>
-
-            <form method="POST">
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('employee_login') }}">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember">
+                        <label class="form-check-label" for="remember">Remember me</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
                 </div>
                 
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                <hr>
+                
+                <div class="text-center">
+                    <small class="text-muted">
+                        Demo Access: Use email "demo@employee.com" and password "demo123"
+                    </small>
                 </div>
-
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
-                </div>
-            </form>
-
-            <div class="text-center mt-3">
-                <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
-            </div>
-
-            <div class="text-center mt-4">
-                <p class="text-muted">Don't have an account? Contact your administrator.</p>
-                <small class="text-muted">
-                    <a href="{{ url_for('employee_quick_access') }}?key=employee123">Quick Demo Access</a>
-                </small>
             </div>
         </div>
     </div>
