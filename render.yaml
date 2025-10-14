@@ -3,10 +3,10 @@ services:
     name: company-management-system
     env: python
     plan: free
-    buildCommand: ./build.sh
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
-        value: 3.11.9
+        value: 3.11.9  # Use 3.11 instead of 3.13 for better compatibility
