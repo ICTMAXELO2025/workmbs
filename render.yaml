@@ -3,7 +3,7 @@ services:
     name: company-management-system
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: bash build.sh
     startCommand: gunicorn app:app
     envVars:
       - key: SECRET_KEY

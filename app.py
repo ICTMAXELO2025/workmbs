@@ -4,11 +4,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, date, timedelta
 import os
-import re
-from functools import wraps
-import pytz
-
 import secrets
+import pytz
 
 # Initialize Flask app first
 app = Flask(__name__)
@@ -35,6 +32,10 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_pre_ping': True
 }
+
+# Production configuration
+if os.environ.get('RENDER'):
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 # Import models after app initialization
 from models import db, Employee, Admin, LeaveRequest, Message, Todo, Document, AdminMessage, Announcement, MessageDocument, AdminMessageDocument, AdminAssignedTodo
@@ -77,6 +78,7 @@ def setup_database():
             print(f"Database setup error: {e}")
             import traceback
             traceback.print_exc()
+            db.session.rollback()
 
 def initialize_database():
     """Initialize database when app starts"""
@@ -93,7 +95,6 @@ initialize_database()
 def login_required(role=None):
     """Decorator to require login and optionally specific role"""
     def decorator(f):
-        @wraps(f)
         def decorated_function(*args, **kwargs):
             if 'user_id' not in session:
                 flash('Please log in to access this page.', 'error')
@@ -156,16 +157,17 @@ def get_database_info():
 app.jinja_env.globals.update(get_database_info=get_database_info)
 
 def send_password_reset_email(email, reset_token, user_role):
-    """Simulate password reset email sending"""
-    # In production, implement actual email sending
-    # For demo, we'll just return True to simulate success
-    print(f"Demo: Password reset link for {email}: /reset-password/{reset_token}")
+    """Send password reset email (simplified version for demo)"""
+    reset_url = url_for('reset_password', token=reset_token, _external=True)
+    
+    # For demo purposes, we'll just log the reset link
+    print(f"Password reset for {email}: {reset_url}")
+    
+    # In a real application, you would send an actual email here
+    # For now, we'll simulate success
     return True
-# Routes
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return send_from_directory('static', filename)
 
+# Routes
 @app.route('/')
 def index():
     """Main index page with links to employee login only"""
@@ -262,40 +264,37 @@ def forgot_password():
         email = request.form.get('email', '').strip().lower()
         employee_id = request.form.get('employee_id', '').strip()
         
-        if not email or not employee_id:
-            flash('Please enter both email and employee ID', 'error')
+        if not email:
+            flash('Please enter your email address', 'error')
             return render_template('forgot_password.html')
         
         # Check if it's an employee
-        employee = Employee.query.filter_by(email=email, id=employee_id, is_active=True).first()
-        if employee:
-            # Generate reset token
-            reset_token = secrets.token_urlsafe(32)
-            password_reset_tokens[reset_token] = {
-                'email': email,
-                'user_id': employee_id,
-                'user_role': 'employee',
-                'expires': get_sast_time() + timedelta(hours=1)
-            }
-            send_password_reset_email(email, reset_token, 'employee')
-            flash('If an account exists with this email, a password reset link has been sent.', 'info')
-            return redirect(url_for('employee_login'))
+        employee = None
+        if employee_id:
+            employee = Employee.query.filter_by(email=email, id=employee_id, is_active=True).first()
         
         # Check if it's an admin (admins don't have employee IDs)
         admin = Admin.query.filter_by(email=email).first()
-        if admin:
+        
+        if employee or admin:
+            # Generate reset token
             reset_token = secrets.token_urlsafe(32)
-            password_reset_tokens[reset_token] = {
+            user_data = {
                 'email': email,
-                'user_id': admin.id,
-                'user_role': 'admin',
+                'user_id': employee.id if employee else admin.id,
+                'user_role': 'employee' if employee else 'admin',
                 'expires': get_sast_time() + timedelta(hours=1)
             }
-            send_password_reset_email(email, reset_token, 'admin')
+            password_reset_tokens[reset_token] = user_data
+            send_password_reset_email(email, reset_token, user_data['user_role'])
             flash('If an account exists with this email, a password reset link has been sent.', 'info')
-            return redirect(url_for('admin_login'))
+            
+            if user_data['user_role'] == 'employee':
+                return redirect(url_for('employee_login'))
+            else:
+                return redirect(url_for('admin_login'))
         
-        # If no user found
+        # If no user found, still show success message for security
         flash('If an account exists with this email, a password reset link has been sent.', 'info')
         return redirect(url_for('employee_login'))
     
@@ -430,7 +429,7 @@ def employee_dashboard():
         for msg in unread_msg_notifications:
             notifications.append({
                 'type': 'message',
-                'content': f'New message from {msg.sender.name}',
+                'content': f'New message from {msg.sender_employee.name}',
                 'time': msg.created_at,
                 'link': url_for('employee_messages')
             })
@@ -789,7 +788,7 @@ def admin_dashboard():
         ).limit(5).all()
         
         recent_messages = AdminMessage.query.options(
-            db.joinedload(AdminMessage.sender)
+            db.joinedload(AdminMessage.employee)
         ).order_by(AdminMessage.created_at.desc()).limit(5).all()
         
         # Get admin notifications
@@ -1086,7 +1085,7 @@ def update_profile():
 def admin_messages():
     current_user = get_current_user()
     messages = AdminMessage.query.options(
-        db.joinedload(AdminMessage.sender)
+        db.joinedload(AdminMessage.employee)
     ).order_by(AdminMessage.created_at.desc()).all()
     
     return render_template('admin_messages.html',
@@ -1419,6 +1418,11 @@ def employee_document_delete(doc_id):
     
     return redirect(url_for('employee_documents'))
 
+# Static files route
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
+
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
@@ -1436,6 +1440,7 @@ def forbidden_error(error):
 # Health check route
 @app.route('/health')
 def health_check():
+    """Simple health check endpoint"""
     try:
         db.session.execute('SELECT 1')
         return jsonify({
@@ -1454,4 +1459,5 @@ def health_check():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
