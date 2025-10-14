@@ -646,7 +646,7 @@ def employee_todos():
                          todos=todos, 
                          current_user=current_user)
 
-    @app.route('/employee/todo/<int:todo_id>/edit', methods=['GET', 'POST'])
+@app.route('/employee/todo/<int:todo_id>/edit', methods=['GET', 'POST'])
 @login_required(role='employee')
 def employee_todo_edit(todo_id):
     current_user = get_current_user()
