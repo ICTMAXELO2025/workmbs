@@ -68,7 +68,34 @@ def setup_database():
             traceback.print_exc()
 
 # Initialize database on first request
-@app.before_first_request
+# Remove or comment out the @app.before_first_request line and replace with:
+
+# Initialize database on first request (modern approach)
+with app.app_context():
+    try:
+        print("Initializing database...")
+        db.create_all()
+        
+        # Check if we need to create initial admin user
+        admin_exists = Admin.query.filter_by(email='admin@maxelo.com').first()
+        if not admin_exists:
+            print("Creating default admin user...")
+            default_admin = Admin(
+                email='admin@maxelo.com',
+                password=generate_password_hash('admin123'),
+                name='System Administrator'
+            )
+            db.session.add(default_admin)
+            db.session.commit()
+            print("Default admin user created")
+        
+        print("Database initialization completed successfully")
+        
+    except Exception as e:
+        print(f"Database initialization warning: {e}")
+        print("This is normal if the database isn't available yet - tables will be created on first request")
+
+        
 def create_tables():
     setup_database()
 def login_required(role=None):
