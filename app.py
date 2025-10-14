@@ -665,8 +665,6 @@ def employee_todos():
                              unread_messages_count=0,
                              today=date.today(),
                              current_user=get_current_user())
-
-                             
 @app.route('/employee/todo/<int:todo_id>/edit', methods=['GET', 'POST'])
 @login_required(role='employee')
 def employee_todo_edit(todo_id):

@@ -15,9 +15,7 @@
                             <h3>Employee Login</h3>
                             <p class="text-muted">Access your personal dashboard, manage leaves, and communicate with colleagues.</p>
                             <a href="{{ url_for('employee_login') }}" class="btn btn-primary btn-lg">Employee Login</a>
-                            <small class="d-block mt-2 text-muted">
-                                <a href="{{ url_for('employee_quick_access') }}?key=employee123">Quick Demo Access</a>
-                            </small>
+                           
                         </div>
                     </div>
                 </div>
@@ -29,23 +27,13 @@
                             <h3>Admin Login</h3>
                             <p class="text-muted">Manage employees, approve leave requests, and oversee company operations.</p>
                             <a href="{{ url_for('admin_login') }}" class="btn btn-success btn-lg">Admin Login</a>
-                            <small class="d-block mt-2 text-muted">
-                                <a href="{{ url_for('admin_quick_access') }}?key=maxelo">Quick Demo Access</a>
-                            </small>
+                           
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-5">
-                <div class="card">
-                    <div class="card-body">
-                        <h4>System Information</h4>
-                        <p><strong>Database:</strong> {{ get_database_info() }}</p>
-                        <p class="text-muted small">For demo purposes, use the quick access links above to test the system immediately.</p>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>
