@@ -612,40 +612,61 @@ def employee_documents_upload():
 @app.route('/employee/todos')
 @login_required(role='employee')
 def employee_todos():
-    current_user = get_current_user()
-    
-    # Get all todos for the current user
-    todos = Todo.query.filter_by(
-        employee_id=current_user.id
-    ).order_by(
-        Todo.is_completed.asc(),
-        Todo.due_date.asc(),
-        Todo.priority.desc()
-    ).all()
-    
-    # Categorize todos for better organization
-    pending_todos = [todo for todo in todos if not todo.is_completed]
-    completed_todos = [todo for todo in todos if todo.is_completed]
-    high_priority_todos = [todo for todo in pending_todos if todo.priority in ['high', 'urgent']]
-    overdue_todos = [todo for todo in pending_todos if todo.due_date and todo.due_date < date.today()]
-    
-    return render_template('employee_todos.html', 
-                         todos=todos,
-                         pending_todos=pending_todos,
-                         completed_todos=completed_todos,
-                         high_priority_todos=high_priority_todos,
-                         overdue_todos=overdue_todos,
-                         today=date.today(),
-                         current_user=current_user)
-    current_user = get_current_user()
-    todos = Todo.query.filter_by(
-        employee_id=current_user.id
-    ).order_by(Todo.due_date.asc(), Todo.priority.desc()).all()
-    
-    return render_template('employee_todos.html', 
-                         todos=todos, 
-                         current_user=current_user)
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            flash('User not found', 'error')
+            return redirect(url_for('logout'))
+        
+        # Get all todos for the current user
+        todos = Todo.query.filter_by(
+            employee_id=current_user.id
+        ).order_by(
+            Todo.is_completed.asc(),
+            Todo.due_date.asc(),
+            Todo.priority.desc()
+        ).all()
+        
+        # Categorize todos for better organization
+        pending_todos = [todo for todo in todos if not todo.is_completed]
+        completed_todos = [todo for todo in todos if todo.is_completed]
+        high_priority_todos = [todo for todo in pending_todos if todo.priority in ['high', 'urgent']]
+        overdue_todos = [todo for todo in pending_todos if todo.due_date and todo.due_date < date.today()]
+        
+        # Get counts for the sidebar
+        pending_todos_count = len(pending_todos)
+        unread_messages_count = Message.query.filter_by(
+            receiver_id=current_user.id, 
+            is_read=False
+        ).count()
+        
+        return render_template('employee_todos.html', 
+                             todos=todos,
+                             pending_todos=pending_todos,
+                             completed_todos=completed_todos,
+                             high_priority_todos=high_priority_todos,
+                             overdue_todos=overdue_todos,
+                             pending_todos_count=pending_todos_count,
+                             unread_messages_count=unread_messages_count,
+                             today=date.today(),
+                             current_user=current_user)
+                             
+    except Exception as e:
+        print(f"Error in employee_todos: {e}")
+        flash('Error loading tasks. Please try again.', 'error')
+        # Provide safe fallback values
+        return render_template('employee_todos.html',
+                             todos=[],
+                             pending_todos=[],
+                             completed_todos=[],
+                             high_priority_todos=[],
+                             overdue_todos=[],
+                             pending_todos_count=0,
+                             unread_messages_count=0,
+                             today=date.today(),
+                             current_user=get_current_user())
 
+                             
 @app.route('/employee/todo/<int:todo_id>/edit', methods=['GET', 'POST'])
 @login_required(role='employee')
 def employee_todo_edit(todo_id):
