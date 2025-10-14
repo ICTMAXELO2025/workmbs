@@ -11,7 +11,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 
 # Database configuration - PostgreSQL only
-# Database configuration - PostgreSQL only
 def get_database_uri():
     """Get database URI based on environment"""
     # Check for PostgreSQL URL first (for production/Render)
@@ -67,37 +66,19 @@ def setup_database():
             import traceback
             traceback.print_exc()
 
-# Initialize database on first request
-# Remove or comment out the @app.before_first_request line and replace with:
-
-# Initialize database on first request (modern approach)
-with app.app_context():
+# Modern approach for database initialization
+def initialize_database():
+    """Initialize database when app starts"""
     try:
-        print("Initializing database...")
-        db.create_all()
-        
-        # Check if we need to create initial admin user
-        admin_exists = Admin.query.filter_by(email='admin@maxelo.com').first()
-        if not admin_exists:
-            print("Creating default admin user...")
-            default_admin = Admin(
-                email='admin@maxelo.com',
-                password=generate_password_hash('admin123'),
-                name='System Administrator'
-            )
-            db.session.add(default_admin)
-            db.session.commit()
-            print("Default admin user created")
-        
-        print("Database initialization completed successfully")
-        
+        with app.app_context():
+            setup_database()
     except Exception as e:
-        print(f"Database initialization warning: {e}")
-        print("This is normal if the database isn't available yet - tables will be created on first request")
+        print(f"Database initialization note: {e}")
+        print("This is normal if database isn't ready yet - tables will be created on first request")
 
-        
-def create_tables():
-    setup_database()
+# Initialize database (but don't crash if it fails)
+initialize_database()
+
 def login_required(role=None):
     """Decorator to require login and optionally specific role"""
     def decorator(f):
@@ -595,15 +576,17 @@ def employee_documents_upload():
             
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                # In a real application, you'd save the file to a storage system
-                # For now, we'll just create a database record
+                # Get file size without reading entire file
+                file.seek(0, 2)  # Seek to end
+                file_size = file.tell()  # Get position (file size)
+                file.seek(0)  # Reset to beginning
                 
                 document = Document(
                     employee_id=current_user.id,
                     filename=filename,
                     original_filename=filename,
                     file_path=f"/uploads/{filename}",  # Placeholder
-                    file_size=len(file.read()),
+                    file_size=file_size,
                     description=request.form.get('description', '').strip(),
                     uploaded_by_admin=False
                 )
@@ -1116,14 +1099,17 @@ def admin_document_add():
             
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                # In production, save the file properly
+                # Get file size without reading entire file
+                file.seek(0, 2)
+                file_size = file.tell()
+                file.seek(0)
                 
                 document = Document(
                     employee_id=employee_id,
                     filename=filename,
                     original_filename=filename,
                     file_path=f"/uploads/{filename}",  # Placeholder
-                    file_size=len(file.read()),
+                    file_size=file_size,
                     description=description,
                     document_type=document_type,
                     tags=tags,
